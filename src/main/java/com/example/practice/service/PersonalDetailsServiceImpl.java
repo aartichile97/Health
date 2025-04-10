@@ -1,16 +1,15 @@
 package com.example.practice.service;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import jakarta.persistence.criteria.Predicate;
 import java.util.regex.Pattern;
-
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,13 +25,11 @@ import com.example.practice.listing.ProposerListing;
 import com.example.practice.listing.SearchFilter;
 import com.example.practice.repository.GenderTableRepository;
 import com.example.practice.repository.PersonalDetailsRepository;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Service
@@ -456,146 +453,26 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	}
 
 	@Override
-	public void exportPersonalDetailsToExcel(HttpServletResponse response) throws IOException {
-		List<PersonalDetails> personalDetailsList = personalDetailsRepository.findAll();
-
+	public String exportPersonalDetailsToExcel() throws IOException {
 		XSSFWorkbook workbook = new XSSFWorkbook();
-
 		XSSFSheet sheet = workbook.createSheet("PersonalDetails");
 
+		List<String> headers = Arrays.asList("Personal ID", "Title", "Full Name", "Date of Birth", "PAN Number",
+				"Gender", "Marital Status", "Nationality", "Occupation", "Email ID", "Mobile No", "Alternate Mobile No",
+				"Address", "Pincode", "City", "State", "Status", "Created At", "Updated At", "Gender ID");
+
 		Row headerRow = sheet.createRow(0);
-//		headerRow.createCell(0).setCellValue("Personal ID");
-//		headerRow.createCell(1).setCellValue("Title");
-//		headerRow.createCell(2).setCellValue("Full Name");
-//		headerRow.createCell(3).setCellValue("Date of Birth");
-//		headerRow.createCell(4).setCellValue("PAN Number");
-//		headerRow.createCell(5).setCellValue("Gender");
-//		headerRow.createCell(6).setCellValue("Marital Status");
-//		headerRow.createCell(7).setCellValue("Nationality");
-//		headerRow.createCell(8).setCellValue("Occupation");
-//		headerRow.createCell(9).setCellValue("Email ID");
-//		headerRow.createCell(10).setCellValue("Mobile No");
-//		headerRow.createCell(11).setCellValue("Alternate Mobile No");
-//		headerRow.createCell(12).setCellValue("Address");
-//		headerRow.createCell(13).setCellValue("Pincode");
-//		headerRow.createCell(14).setCellValue("City");
-//		headerRow.createCell(15).setCellValue("State");
-//		headerRow.createCell(16).setCellValue("Status");
-//		headerRow.createCell(17).setCellValue("Created At");
-//		headerRow.createCell(18).setCellValue("Updated At");
-//		headerRow.createCell(19).setCellValue("Gender ID");
-		String[] headers = {
-			    "Personal ID", "Title", "Full Name", "Date of Birth", "PAN Number", "Gender",
-			    "Marital Status", "Nationality", "Occupation", "Email ID", "Mobile No",
-			    "Alternate Mobile No", "Address", "Pincode", "City", "State", "Status",
-			    "Created At", "Updated At", "Gender ID"
-			};
-
-			for (int i = 0; i < headers.length; i++) {
-			    headerRow.createCell(i).setCellValue(headers[i]);
-			}
-
-		int rowNum = 1;
-		for (PersonalDetails personalDetails : personalDetailsList) {
-			Row row = sheet.createRow(rowNum++);
-			row.createCell(0).setCellValue(personalDetails.getPersonalId());
-			row.createCell(1).setCellValue(personalDetails.getTitle());
-			row.createCell(2).setCellValue(personalDetails.getFullName());
-			row.createCell(3).setCellValue(personalDetails.getDateOfBirth() != null ? personalDetails.getDateOfBirth().toString() : "");
-			row.createCell(4).setCellValue(personalDetails.getPanNumber());
-			row.createCell(5).setCellValue(personalDetails.getGender() != null ? personalDetails.getGender().toString() : "");
-			row.createCell(6).setCellValue(personalDetails.getMaritalStatus() != null ? personalDetails.getMaritalStatus().toString() : "");
-			row.createCell(7).setCellValue(personalDetails.getNationality() != null ? personalDetails.getNationality().toString() : "");
-			row.createCell(8).setCellValue(personalDetails.getOccupation() != null ? personalDetails.getOccupation().toString() : "");
-			row.createCell(9).setCellValue(personalDetails.getEmailId());
-			row.createCell(10).setCellValue(personalDetails.getMobileNo());
-			row.createCell(11).setCellValue(personalDetails.getAlternateMobileNo());
-			row.createCell(12).setCellValue(personalDetails.getAddress());
-			row.createCell(13).setCellValue(personalDetails.getPincode());
-			row.createCell(14).setCellValue(personalDetails.getCity());
-			row.createCell(15).setCellValue(personalDetails.getState());
-			row.createCell(16).setCellValue(personalDetails.getStatus() != null ? personalDetails.getStatus().toString() : "");
-			row.createCell(17).setCellValue(personalDetails.getCreatedAt() != null ? personalDetails.getCreatedAt().toString() : "");
-			row.createCell(18).setCellValue(personalDetails.getUpdatedAt() != null ? personalDetails.getUpdatedAt().toString() : "");
-			row.createCell(19).setCellValue(personalDetails.getGenderId() != null ? personalDetails.getGenderId() : 0);
+		for (int i = 0; i < headers.size(); i++) {
+			headerRow.createCell(i).setCellValue(headers.get(i));
 		}
 
-		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-		response.setHeader("Content-Disposition", "attachment; filename=personal_details.xlsx");
-
-//		try (ServletOutputStream out = response.getOutputStream()) {
-//			workbook.write(out);
-//		} finally {
-//			workbook.close();
-//		}
-		
-			workbook.write(response.getOutputStream());
-			workbook.close();
+		String filepath = "C:\\download\\sample_personal_details.xlsx";
+		try (FileOutputStream out = new FileOutputStream(filepath)) {
+			workbook.write(out);
 		}
+		workbook.close();
+		return filepath;
 	}
 
-//	@Override
-//	public List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing) {
-//		CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-//		CriteriaQuery<PersonalDetails> criteriaQuery = criteriaBuilder.createQuery(PersonalDetails.class);
-//		Root<PersonalDetails> root = criteriaQuery.from(PersonalDetails.class);
-//
-//		if (proposerListing.getPage() >= 0 && proposerListing.getSize() >= 0) {
-//			if (proposerListing.getSortBy() == null || proposerListing.getSortBy().isEmpty()) {
-//				proposerListing.setSortBy("personalId");
-//			}
-//			if (proposerListing.getSortOrder() == null || proposerListing.getSortOrder().isEmpty()) {
-//				proposerListing.setSortOrder("DESC");
-//			}
-//		} else {
-//			throw new IllegalArgumentException("Invalid pagination values");
-//		}
-//
-//		if (proposerListing.getSortBy() != null && !proposerListing.getSortBy().isEmpty()) {
-//			String sortBy = proposerListing.getSortBy();
-//			if ("ASC".equalsIgnoreCase(proposerListing.getSortOrder())) {
-//				criteriaQuery.orderBy(criteriaBuilder.asc(root.get(sortBy)));
-//			} else {
-//				criteriaQuery.orderBy(criteriaBuilder.desc(root.get(sortBy)));
-//			}
-//		}
-//
-//		if (proposerListing.getSearchFilters() != null && proposerListing.getSearchFilters().length > 0) {
-//			SearchFilter[] filters = proposerListing.getSearchFilters();
-//
-//			for (SearchFilter filter : filters) {
-//				if (filter.getFullName() != null && !filter.getFullName().isEmpty()) {
-//					criteriaQuery.where(criteriaBuilder.like(criteriaBuilder.lower(root.get("fullName")),
-//							"%" + filter.getFullName().toLowerCase() + "%"));
-//				}
-//				if (filter.getEmailId() != null && !filter.getEmailId().isEmpty()) {
-//					criteriaQuery.where(criteriaBuilder.like(criteriaBuilder.lower(root.get("emailId")),
-//							"%" + filter.getEmailId().toLowerCase() + "%"));
-//				}
-//				if (filter.getCity() != null && !filter.getCity().isEmpty()) {
-//					criteriaQuery.where(criteriaBuilder.like(criteriaBuilder.lower(root.get("city")),
-//							"%" + filter.getCity().toLowerCase() + "%"));
-//				}
-//				if (filter.getStatus() != null) {
-//					criteriaQuery.where(criteriaBuilder.equal(root.get("status"), filter.getStatus()));
-//				}
-//			}
-//		}
-//
-//		if (proposerListing.getPage() != null && proposerListing.getSize() != null && proposerListing.getPage() > 0
-//				&& proposerListing.getSize() > 0) {
-//			Integer page = proposerListing.getPage();
-//			Integer size = proposerListing.getSize();
-//
-//			TypedQuery<PersonalDetails> typedQuery = entityManager.createQuery(criteriaQuery);
-//			typedQuery.setFirstResult((page - 1) * size);
-//			typedQuery.setMaxResults(size);
-//
-//			return typedQuery.getResultList();
-//		}
-//
-//		return entityManager.createQuery(criteriaQuery).getResultList();
-//	}
 
-
-
+}

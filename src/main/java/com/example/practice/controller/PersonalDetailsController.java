@@ -1,6 +1,5 @@
 package com.example.practice.controller;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +19,6 @@ import com.example.practice.repository.PersonalDetailsRepository;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
 
-import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/personal_details/")
@@ -166,19 +164,18 @@ public class PersonalDetailsController {
 	}
 
 	@GetMapping("export_to_excel")
-	public void exportPersonalDetailsToExcel(HttpServletResponse response)
-
+	public ResponseHandler exportPersonalDetailsToExcel()
 	{
 //		ResponseHandler response = new ResponseHandler();
-
 		try {
-			personalDetailsService.exportPersonalDetailsToExcel(response);
+			String downloadLink = personalDetailsService.exportPersonalDetailsToExcel();
+			response.setData(downloadLink);
+			response.setMessage("Downloaded");
 
 		} catch (Exception e) {
-
 			e.printStackTrace();
-
 		}
+		return response;
 	}
 
 }

@@ -24,8 +24,8 @@ public interface PersonalDetailsService {
 
 	List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing);
 
-    void exportPersonalDetailsToExcel(HttpServletResponse response) throws IOException;
-//    public void createExcelTemplate(String filePath) throws IOException;
 	Integer totalRecords();
+
+	String exportPersonalDetailsToExcel() throws IOException;
 
 }
