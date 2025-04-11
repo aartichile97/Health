@@ -8,6 +8,6 @@ import com.example.practice.entity.GenderTable;
 
 @Repository
 public interface GenderTableRepository extends JpaRepository<GenderTable, Integer> {
-	
+
 	Optional<GenderTable> findByGenderType(String genderType);
 }

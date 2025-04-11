@@ -7,13 +7,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+
 import java.util.regex.Pattern;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.Gender;
 import com.example.practice.entity.GenderTable;
@@ -29,11 +39,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
-import jakarta.servlet.http.HttpServletResponse;
 
 @Service
 public class PersonalDetailsServiceImpl implements PersonalDetailsService {
+
 	Integer totalRecord = 0;
 
 	@Override
@@ -466,7 +475,9 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 			headerRow.createCell(i).setCellValue(headers.get(i));
 		}
 
-		String filepath = "C:\\download\\sample_personal_details.xlsx";
+//		String filepath = "C:\\download\\sample_personal_details.xlsx";
+		String uid = UUID.randomUUID().toString().replace("-", "");
+		String filepath = "C:\\download\\sample_personal_details_" + uid + ".xlsx";
 		try (FileOutputStream out = new FileOutputStream(filepath)) {
 			workbook.write(out);
 		}
@@ -474,5 +485,116 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 		return filepath;
 	}
 
+//	@Override
+//	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException {
+//
+//		List<PersonalDetails> savedExcelList = new ArrayList<>();
+//		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
+//			XSSFSheet sheet = workbook.getSheetAt(0);
+//			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+//				XSSFRow row = sheet.getRow(i);
+//				if (row == null)
+//					continue;
+//
+//				PersonalDetailsDto dto = new PersonalDetailsDto();
+//				dto.setTitle(getCellString(row.getCell(0)));
+//				dto.setFullName(getCellString(row.getCell(1)));
+//
+//				Cell dobCell = row.getCell(2);
+//				if (dobCell != null && dobCell.getCellType() == CellType.NUMERIC
+//						&& DateUtil.isCellDateFormatted(dobCell)) {
+//					dto.setDateOfBirth(dobCell.getLocalDateTimeCellValue().toLocalDate());
+//				}
+//
+//				dto.setPanNumber(getCellString(row.getCell(3)));
+//				dto.setGender(getCellString(row.getCell(4)));
+//				dto.setMaritalStatus(getCellString(row.getCell(5)));
+//				dto.setNationality(getCellString(row.getCell(6)));
+//				dto.setOccupation(getCellString(row.getCell(7)));
+//				dto.setEmailId(getCellString(row.getCell(8)));
+//				dto.setMobileNo(getCellString(row.getCell(9)));
+//				dto.setAlternateMobileNo(getCellString(row.getCell(10)));
+//				dto.setAddress(getCellString(row.getCell(11)));
+//				dto.setPincode(getCellString(row.getCell(12)));
+//				dto.setCity(getCellString(row.getCell(13)));
+//				dto.setState(getCellString(row.getCell(14)));
+//
+//				PersonalDetails saveDetails = savePersonalDetails(dto);
+//				savedExcelList.add(saveDetails);
+//				
+//				
+//			}
+//		}
+//		return savedExcelList;
+//	}
+
+	@Override
+	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException {
+
+		List<PersonalDetails> savedExcelList = new ArrayList<>();
+
+		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
+			XSSFSheet sheet = workbook.getSheetAt(0);
+			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+				XSSFRow row = sheet.getRow(i);
+				if (row == null)
+					continue;
+
+				PersonalDetailsDto dto = new PersonalDetailsDto();
+
+				// Validate Title
+				String title = getCellString(row.getCell(0)).trim();
+				if (title.isEmpty() || !title.matches("^[a-zA-Z. ]+$")) {
+					System.out.println("❌ Skipping Row " + i + ": Invalid Title = " + title);
+					continue;
+				}
+				dto.setTitle(title);
+
+				dto.setFullName(getCellString(row.getCell(1)));
+
+				Cell dobCell = row.getCell(2);
+				if (dobCell != null && dobCell.getCellType() == CellType.NUMERIC
+						&& DateUtil.isCellDateFormatted(dobCell)) {
+					dto.setDateOfBirth(dobCell.getLocalDateTimeCellValue().toLocalDate());
+				}
+
+				dto.setPanNumber(getCellString(row.getCell(3)));
+				dto.setGender(getCellString(row.getCell(4)));
+				dto.setMaritalStatus(getCellString(row.getCell(5)));
+				dto.setNationality(getCellString(row.getCell(6)));
+				dto.setOccupation(getCellString(row.getCell(7)));
+				dto.setEmailId(getCellString(row.getCell(8)));
+				dto.setMobileNo(getCellString(row.getCell(9)));
+				dto.setAlternateMobileNo(getCellString(row.getCell(10)));
+				dto.setAddress(getCellString(row.getCell(11)));
+				dto.setPincode(getCellString(row.getCell(12)));
+				dto.setCity(getCellString(row.getCell(13)));
+				dto.setState(getCellString(row.getCell(14)));
+
+				try {
+					PersonalDetails saveDetails = savePersonalDetails(dto);
+					savedExcelList.add(saveDetails);
+				} catch (IllegalArgumentException e) {
+					System.out.println("❌ Error saving row " + i + ": " + e.getMessage());
+				}
+			}
+		}
+		return savedExcelList;
+	}
+
+	private String getCellString(Cell cell) {
+		if (cell == null)
+			return "";
+		if (cell.getCellType() == CellType.STRING) {
+			return cell.getStringCellValue();
+		} else if (cell.getCellType() == CellType.NUMERIC && !DateUtil.isCellDateFormatted(cell)) {
+			return String.valueOf((long) cell.getNumericCellValue());
+		} else if (cell.getCellType() == CellType.BOOLEAN) {
+			return String.valueOf(cell.getBooleanCellValue());
+		} else {
+			return "";
+		}
+
+	}
 
 }

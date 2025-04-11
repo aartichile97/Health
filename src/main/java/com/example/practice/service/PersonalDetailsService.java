@@ -3,12 +3,10 @@ package com.example.practice.service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
+import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
 import com.example.practice.listing.ProposerListing;
-
-import jakarta.servlet.http.HttpServletResponse;
 
 public interface PersonalDetailsService {
 
@@ -28,4 +26,5 @@ public interface PersonalDetailsService {
 
 	String exportPersonalDetailsToExcel() throws IOException;
 
+	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
 }

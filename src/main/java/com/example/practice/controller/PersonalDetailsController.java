@@ -3,7 +3,9 @@ package com.example.practice.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,14 +13,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
 import com.example.practice.listing.ProposerListing;
-import com.example.practice.repository.PersonalDetailsRepository;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
 
+import io.swagger.v3.oas.annotations.Parameter;
 
 @RestController
 @RequestMapping("/personal_details/")
@@ -26,9 +31,6 @@ public class PersonalDetailsController {
 
 	@Autowired
 	private PersonalDetailsService personalDetailsService;
-
-	@Autowired
-	private PersonalDetailsRepository personalDetailsRepository;
 
 	ResponseHandler response = new ResponseHandler();
 
@@ -163,19 +165,39 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@GetMapping("export_to_excel")
-	public ResponseHandler exportPersonalDetailsToExcel()
-	{
+	@GetMapping("export_personal_details")
+	public ResponseHandler exportPersonalDetailsToExcel() {
 //		ResponseHandler response = new ResponseHandler();
 		try {
 			String downloadLink = personalDetailsService.exportPersonalDetailsToExcel();
 			response.setData(downloadLink);
 			response.setMessage("Downloaded");
+			response.setStatus(true);
 
 		} catch (Exception e) {
 			e.printStackTrace();
+			response.setMessage("Failed to export");
+			response.setStatus(false);
 		}
 		return response;
 	}
 
+	@PostMapping(value = "import_personal_details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseHandler importPersonalDetails(
+	        @RequestParam("file") MultipartFile file) {
+
+	    ResponseHandler response = new ResponseHandler(); // ⬅️ create new instance
+	    try {
+	        List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file);
+	        response.setData(savedExcelList);
+	        response.setMessage("Excel imported successfully. Rows saved: " + savedExcelList.size());
+	        response.setStatus(true);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        response.setMessage("Failed to import excel file");
+	        response.setStatus(false);
+	        response.setData(new ArrayList<>());
+	    }
+	    return response;
+	}
 }

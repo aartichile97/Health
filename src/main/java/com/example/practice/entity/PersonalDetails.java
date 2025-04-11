@@ -81,14 +81,13 @@ public class PersonalDetails {
 	@UpdateTimestamp
 	private LocalDateTime updatedAt;
 
-	 
-    @Column(name = "gender_id") 
+	@Column(name = "gender_id")
 	private Integer genderId;
 
 	public PersonalDetails(Integer personalId, String title, String fullName, LocalDate dateOfBirth, String panNumber,
 			Gender gender, MaritalStatus maritalStatus, Nationality nationality, Occupation occupation, String emailId,
 			String mobileNo, String alternateMobileNo, String address, String pincode, String city, String state,
-			Character status, LocalDateTime createdAt, LocalDateTime updatedAt, Integer  genderId) {
+			Character status, LocalDateTime createdAt, LocalDateTime updatedAt, Integer genderId) {
 		super();
 		this.personalId = personalId;
 		this.title = title;
