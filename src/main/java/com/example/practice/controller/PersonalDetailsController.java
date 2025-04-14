@@ -23,7 +23,6 @@ import com.example.practice.listing.ProposerListing;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
 
-import io.swagger.v3.oas.annotations.Parameter;
 
 @RestController
 @RequestMapping("/personal_details/")
