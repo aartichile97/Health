@@ -9,7 +9,6 @@ public class ResponseHandler {
 
 	public ResponseHandler() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 	public ResponseHandler(Boolean status, long totalRecords, Object data, String message) {

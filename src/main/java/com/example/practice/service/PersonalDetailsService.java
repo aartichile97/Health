@@ -27,4 +27,6 @@ public interface PersonalDetailsService {
 	String exportPersonalDetailsToExcel() throws IOException;
 
 	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
+//	public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
+	
 }

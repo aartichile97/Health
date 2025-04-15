@@ -32,6 +32,8 @@ import com.example.practice.listing.ProposerListing;
 import com.example.practice.listing.SearchFilter;
 import com.example.practice.repository.GenderTableRepository;
 import com.example.practice.repository.PersonalDetailsRepository;
+import com.example.practice.repository.ResponseExcelRepository;
+import com.example.practice.response.ResponseExcel;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -53,6 +55,9 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 	@Autowired
 	private GenderTableRepository genderTableRepository;
+
+	@Autowired
+	private ResponseExcelRepository responseExcelRepository;
 
 	@Override
 	public PersonalDetails savePersonalDetails(PersonalDetailsDto personalDetailsDto) {
@@ -463,9 +468,13 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 		XSSFWorkbook workbook = new XSSFWorkbook();
 		XSSFSheet sheet = workbook.createSheet("PersonalDetails");
 
-		List<String> headers = Arrays.asList("Personal ID", "Title", "Full Name", "Date of Birth", "PAN Number",
-				"Gender", "Marital Status", "Nationality", "Occupation", "Email ID", "Mobile No", "Alternate Mobile No",
-				"Address", "Pincode", "City", "State", "Status", "Created At", "Updated At", "Gender ID");
+//		List<String> headers = Arrays.asList("Personal ID", "Title", "Full Name", "Date of Birth", "PAN Number",
+//				"Gender", "Marital Status", "Nationality", "Occupation", "Email ID", "Mobile No", "Alternate Mobile No",
+//				"Address", "Pincode", "City", "State", "Status", "Created At", "Updated At", "Gender ID");
+		List<String> headers = Arrays.asList("Personal ID", "Title", "Full Name*", "Date of Birth*", "PAN Number*",
+				"Gender*", "Marital Status", "Nationality", "Occupation", "Email ID*", "Mobile No*",
+				"Alternate Mobile No", "Address*", "Pincode*", "City*", "State*", "Status", "Created At", "Updated At",
+				"Gender ID");
 
 		Row headerRow = sheet.createRow(0);
 		for (int i = 0; i < headers.size(); i++) {
@@ -481,147 +490,238 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 		return filepath;
 	}
 
-	@Override
 	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException {
-
 		List<PersonalDetails> savedExcelList = new ArrayList<>();
+		ResponseExcel response = new ResponseExcel();
 
 		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
 			XSSFSheet sheet = workbook.getSheetAt(0);
 			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 				XSSFRow row = sheet.getRow(i);
-				if (row == null)
+				if (row == null) {
 					continue;
+				}
 
 				PersonalDetails details = new PersonalDetails();
 
 				String title = getCellString(row.getCell(0));
-				if (title == null || title.trim().isEmpty()) {
-					continue;
-				}
+//				if (title == null || title.trim().isEmpty()) {
+//					continue;
+//				}
 				details.setTitle(title);
 
 				String fullName = getCellString(row.getCell(1));
-				if (fullName == null || !fullName.matches("[A-Za-z]")) {
+				if (fullName == null || !fullName.matches("[A-Za-z ]+")) {
+					response.setStatus(false);
+					response.setError("Invalid Full Name");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("fullName");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setFullName(fullName);
 				}
-				details.setFullName(fullName);
 
+//				Cell dobCell = row.getCell(2);
+//				if (dobCell != null && dobCell.getCellType() == CellType.NUMERIC
+//						&& DateUtil.isCellDateFormatted(dobCell)) {
+//					details.setDateOfBirth(dobCell.getLocalDateTimeCellValue().toLocalDate());
+//				}
 				Cell dobCell = row.getCell(2);
 				if (dobCell != null && dobCell.getCellType() == CellType.NUMERIC
 						&& DateUtil.isCellDateFormatted(dobCell)) {
 					details.setDateOfBirth(dobCell.getLocalDateTimeCellValue().toLocalDate());
+				} else {
+					response.setStatus(false);
+					response.setError("Invalid or Missing Date of Birth");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("dateOfBirth");
+					responseExcelRepository.save(response);
+					continue;
 				}
 
 				String panNumber = getCellString(row.getCell(3));
-				if (panNumber == null || panNumber.trim().isEmpty() || !panNumber.matches("[A-Z]{5}[0-9]{4}[A-Z]{1}")) {
+				if (panNumber == null || !panNumber.matches("[A-Z]{5}[0-9]{4}[A-Z]{1}")) {
+					response.setStatus(false);
+					response.setError("Invalid PAN Number");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("panNumber");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setPanNumber(panNumber);
 				}
-				details.setPanNumber(panNumber);
 
-				String genderString = getCellString(row.getCell(4)).toUpperCase();
-				String validGender = null;
-				for (Gender gender : Gender.values()) {
-					if (gender.name().equalsIgnoreCase(genderString)) {
-						details.setGender(gender);
-						details.setGenderId(getGenderId(gender));
-						validGender = gender.name();
+//				String genderString = getCellString(row.getCell(4));
+//				boolean validGender = false;
+//				if (genderString != null) {
+//					for (Gender gender : Gender.values()) {
+//						if (gender.name().equalsIgnoreCase(genderString)) {
+//							details.setGender(gender);
+//							details.setGenderId(getGenderId(gender));
+//							validGender = true;
+//							break;
+//						}
+//					}
+//				}
+//				if (!validGender) {
+//					response.setStatus(false);
+//					response.setError("Invalid Gender");
+//					response.setUpdateMessage("Failed");
+//					response.setErrorField("gender");
+//					responseExcelRepository.save(response);
+//					continue;
+//				}
+				String genderString = getCellString(row.getCell(4)).trim().toUpperCase();
+				Gender gender = null;
+				for (Gender g : Gender.values()) {
+					if (g.name().equals(genderString)) {
+						gender = g;
 						break;
 					}
 				}
-				if (validGender == null) {
-					System.out.println();
+
+				if (gender == null) {
+					response.setStatus(false);
+					response.setError("Invalid Gender");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("gender");
+					responseExcelRepository.save(response);
 					continue;
 				}
+				details.setGender(gender);
+				details.setGenderId(getGenderId(gender));
 
 				String maritalStatusString = getCellString(row.getCell(5)).toUpperCase();
-				String validMaritalStatus = null;
+				boolean validMaritalStatus = false;
 				for (MaritalStatus status : MaritalStatus.values()) {
 					if (status.name().equalsIgnoreCase(maritalStatusString)) {
 						details.setMaritalStatus(status);
-						validMaritalStatus = status.name();
+						validMaritalStatus = true;
 						break;
 					}
 				}
-				if (validMaritalStatus == null) {
-					continue;
-				}
+//				if (!validMaritalStatus) {
+//					continue;
+//				}
 
 				String nationalityString = getCellString(row.getCell(6)).toUpperCase();
-				String validNationality = null;
+				boolean validNationality = false;
 				for (Nationality nationality : Nationality.values()) {
 					if (nationality.name().equalsIgnoreCase(nationalityString)) {
 						details.setNationality(nationality);
-						validNationality = nationality.name();
+						validNationality = true;
 						break;
 					}
 				}
-				if (validNationality == null) {
-					continue;
-				}
+//				if (!validNationality) {
+//					continue;
+//				}
 
 				String occupationString = getCellString(row.getCell(7)).toUpperCase();
-				String validOccupation = null;
+				boolean validOccupation = false;
 				for (Occupation occupation : Occupation.values()) {
 					if (occupation.name().equalsIgnoreCase(occupationString)) {
 						details.setOccupation(occupation);
-						validOccupation = occupation.name();
+						validOccupation = true;
 						break;
 					}
 				}
-				if (validOccupation == null) {
-					continue;
-				}
+//				if (!validOccupation) {
+//					continue;
+//				}
 
 				String email = getCellString(row.getCell(8));
 				if (email == null || !email.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+					response.setStatus(false);
+					response.setError("Invalid Email ID");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("emailId");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setEmailId(email);
 				}
-				details.setEmailId(email);
 
 				String mobileNo = getCellString(row.getCell(9));
 				if (mobileNo == null || !mobileNo.matches("[6-9]\\d{9}")) {
+					response.setStatus(false);
+					response.setError("Invalid Mobile Number");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("mobileNo");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setMobileNo(mobileNo);
 				}
-				details.setMobileNo(mobileNo);
 
 				String alternateMobileNo = getCellString(row.getCell(10));
-				if (alternateMobileNo != null && !alternateMobileNo.isEmpty()
-						&& !alternateMobileNo.matches("[6-9]\\d{9}")) {
-					continue;
-				}
+//				if (alternateMobileNo != null && !alternateMobileNo.isEmpty()
+//						&& !alternateMobileNo.matches("[6-9]\\d{9}")) {
+//					continue;
+//				}
 				details.setAlternateMobileNo(alternateMobileNo);
 
 				String address = getCellString(row.getCell(11));
 				if (address == null || address.trim().isEmpty()) {
+					response.setStatus(false);
+					response.setError("Address is required");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("address");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setAddress(address);
 				}
-				details.setAddress(address);
 
 				String pincode = getCellString(row.getCell(12));
 				if (pincode == null || !pincode.matches("4\\d{5}")) {
+					response.setStatus(false);
+					response.setError("Invalid Pincode");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("pincode");
+					responseExcelRepository.  save(response);
 					continue;
+				} else {
+					details.setPincode(pincode);
 				}
-				details.setPincode(pincode);
 
 				String city = getCellString(row.getCell(13));
 				if (city == null || city.trim().isEmpty()) {
+					response.setStatus(false);
+					response.setError("City is required");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("city");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setCity(city);
 				}
-				details.setCity(city);
 
 				String state = getCellString(row.getCell(14));
 				if (state == null || state.trim().isEmpty()) {
+					response.setStatus(false);
+					response.setError("State is required");
+					response.setUpdateMessage("Failed");
+					response.setErrorField("state");
+					responseExcelRepository.save(response);
 					continue;
+				} else {
+					details.setState(state);
 				}
-				details.setState(state);
 
 				details.setStatus('Y');
 
-				PersonalDetails save = personalDetailsRepository.save(details);
-				savedExcelList.add(save);
+				PersonalDetails saved = personalDetailsRepository.save(details);
+				response.setStatus(true);
+				response.setError("Success");
+				response.setUpdateMessage("Inserted Successfully");
+				response.setErrorField("Id : " + details.getPersonalId());
+				responseExcelRepository.save(response);
+				savedExcelList.add(saved);
 			}
 		}
+
 		return savedExcelList;
 	}
 
