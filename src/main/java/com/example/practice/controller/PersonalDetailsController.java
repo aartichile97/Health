@@ -186,10 +186,14 @@ public class PersonalDetailsController {
 	    ResponseHandler response = new ResponseHandler(); // ⬅️ create new instance
 	    try {
 	        List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file);
+	        Integer excelTotalRecords = personalDetailsService.totalRecords();
+	        Integer excelfailedRecords = personalDetailsService.failedRecords();
 
 	        response.setData(savedExcelList);
-	        response.setMessage("Excel imported successfully. Rows saved: " + savedExcelList.size());
+//	        response.setMessage("Excel imported successfully. Rows saved: " +savedExcelList.size());
+	        response.setMessage("Successfully saved " +savedExcelList.size()  +" & failed records "+excelfailedRecords+ " rows out of "+excelTotalRecords);
 	        response.setStatus(true);
+			response.setTotalRecords(personalDetailsService.totalRecords());
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	        response.setMessage("Failed to import excel file");

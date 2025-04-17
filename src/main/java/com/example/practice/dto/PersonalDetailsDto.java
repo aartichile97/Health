@@ -7,7 +7,7 @@ public class PersonalDetailsDto {
 //	private Integer personalId;
 	private String title;
 	private String fullName;
-	private LocalDate dateOfBirth;
+	private String dateOfBirth;
 	private String panNumber;
 	private String gender;
 	private String maritalStatus;
@@ -38,11 +38,11 @@ public class PersonalDetailsDto {
 		this.fullName = fullName;
 	}
 
-	public LocalDate getDateOfBirth() {
+	public String getDateOfBirth() {
 		return dateOfBirth;
 	}
 
-	public void setDateOfBirth(LocalDate dateOfBirth) {
+	public void setDateOfBirth(String dateOfBirth) {
 		this.dateOfBirth = dateOfBirth;
 	}
 

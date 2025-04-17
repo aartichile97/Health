@@ -1,6 +1,5 @@
 package com.example.practice.entity;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -28,7 +27,7 @@ public class PersonalDetails {
 	private String fullName;
 
 	@Column(name = "date_of_birth")
-	private LocalDate dateOfBirth;
+	private String dateOfBirth;
 
 	@Column(name = "pan_number")
 	private String panNumber;
@@ -84,7 +83,10 @@ public class PersonalDetails {
 	@Column(name = "gender_id")
 	private Integer genderId;
 
-	public PersonalDetails(Integer personalId, String title, String fullName, LocalDate dateOfBirth, String panNumber,
+
+
+
+	public PersonalDetails(Integer personalId, String title, String fullName, String dateOfBirth, String panNumber,
 			Gender gender, MaritalStatus maritalStatus, Nationality nationality, Occupation occupation, String emailId,
 			String mobileNo, String alternateMobileNo, String address, String pincode, String city, String state,
 			Character status, LocalDateTime createdAt, LocalDateTime updatedAt, Integer genderId) {
@@ -135,11 +137,11 @@ public class PersonalDetails {
 		this.fullName = fullName;
 	}
 
-	public LocalDate getDateOfBirth() {
+	public String getDateOfBirth() {
 		return dateOfBirth;
 	}
 
-	public void setDateOfBirth(LocalDate dateOfBirth) {
+	public void setDateOfBirth(String dateOfBirth) {
 		this.dateOfBirth = dateOfBirth;
 	}
 

@@ -23,6 +23,7 @@ public interface PersonalDetailsService {
 	List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing);
 
 	Integer totalRecords();
+	Integer failedRecords();
 
 	String exportPersonalDetailsToExcel() throws IOException;
 
