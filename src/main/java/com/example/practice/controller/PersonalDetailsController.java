@@ -1,7 +1,9 @@
 package com.example.practice.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -183,17 +185,24 @@ public class PersonalDetailsController {
 	public ResponseHandler importPersonalDetails(
 	        @RequestParam("file") MultipartFile file) {
 
-	    ResponseHandler response = new ResponseHandler(); // ⬅️ create new instance
+	    ResponseHandler response = new ResponseHandler();
+	    
 	    try {
-	        List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file);
-	        Integer excelTotalRecords = personalDetailsService.totalRecords();
-	        Integer excelfailedRecords = personalDetailsService.failedRecords();
+	    	
+	    	Map<String, Integer> recordCount = new HashMap<>();
+	        List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file, recordCount);
 
+	        Integer totalExcelCount = recordCount.getOrDefault("totalExcelCount", 0);
+	        Integer errorExcelCount = recordCount.getOrDefault("errorExcelCount", 0);
+	        
 	        response.setData(savedExcelList);
 //	        response.setMessage("Excel imported successfully. Rows saved: " +savedExcelList.size());
-	        response.setMessage("Successfully saved " +savedExcelList.size()  +" & failed records "+excelfailedRecords+ " rows out of "+excelTotalRecords);
+//	        response.setMessage("Successfully saved " +savedExcelList.size()  +" & failed records "+errorExcelCount+ " rows out of "+totalExcelCount);
+	        response.setMessage("Out of " +totalExcelCount +" , "+savedExcelList.size()+" Saved "+errorExcelCount+ " Failed ");
+
 	        response.setStatus(true);
-			response.setTotalRecords(personalDetailsService.totalRecords());
+			response.setTotalRecords(totalExcelCount);
+//			response.setTotalRecords(personalDetailsService.totalRecords());
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	        response.setMessage("Failed to import excel file");

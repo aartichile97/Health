@@ -2,6 +2,7 @@ package com.example.practice.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
@@ -23,11 +24,11 @@ public interface PersonalDetailsService {
 	List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing);
 
 	Integer totalRecords();
-	Integer failedRecords();
+//	Integer failedRecords();
 
 	String exportPersonalDetailsToExcel() throws IOException;
 
-	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
+	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount) throws IOException;
 //	public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
 	
 }

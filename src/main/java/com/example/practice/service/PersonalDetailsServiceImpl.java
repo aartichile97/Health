@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -45,20 +46,19 @@ import jakarta.persistence.criteria.Root;
 @Service
 public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
-	Integer totalRecord;
-
+	Integer totalRecord = 0;
 
 	@Override
 	public Integer totalRecords() {
 
 		return totalRecord;
 	}
-	Integer failedRecord;
-	@Override
-	public Integer failedRecords() {
-
-		return failedRecord;
-	}
+//	Integer failedRecord;
+//	@Override
+//	public Integer failedRecords() {
+//
+//		return failedRecord;
+//	}
 
 	@Autowired
 	private PersonalDetailsRepository personalDetailsRepository;
@@ -500,13 +500,15 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	}
 
 	@Override
-	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file) throws IOException {
+	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount) throws IOException {
 		List<PersonalDetails> savedExcelList = new ArrayList<>();
 
+		recordCount.put("totalExcelCount", 0);
+		recordCount.put("errorExcelCount", 0);
+		
 		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
 			XSSFSheet sheet = workbook.getSheetAt(0);
-			totalRecord=0;
-			failedRecord=0;
+
 			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 				ResponseExcel response = new ResponseExcel();
 				XSSFRow row = sheet.getRow(i);
@@ -526,7 +528,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 				if (isEmptyRow)
 					continue;
 
-				totalRecord++;
+				recordCount.put("totalExcelCount", recordCount.get("totalExcelCount")+1);
 
 				PersonalDetails entity = new PersonalDetails();
 
@@ -544,7 +546,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setUpdateMessage("Invalid full name");
 					response.setUpdateMessage(fullName);
 					responseExcelRepository.save(response);
-					failedRecord++;
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				} else {
 					entity.setFullName(fullName);
@@ -557,7 +559,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Date Of Birth");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 
 					continue;
 				} else {
@@ -571,7 +573,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Pan Number");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 
 					continue;
 				} else {
@@ -592,7 +594,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Gender");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 
 					continue;
 				} else {
@@ -672,7 +674,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Email");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 
 					continue;
 				} else {
@@ -686,8 +688,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Mobile Number");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
-
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				} else {
 					entity.setMobileNo(mobileNumber);
@@ -708,8 +709,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid address");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
-
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				}
 				entity.setAddress(address);
@@ -721,8 +721,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Pincode");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
-
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				}
 				entity.setPincode(pincode);
@@ -734,8 +733,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid City");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
-
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				} else {
 					entity.setCity(city);
@@ -748,8 +746,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid State");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					failedRecord++;
-
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
 					continue;
 				} else {
 					entity.setState(state);
