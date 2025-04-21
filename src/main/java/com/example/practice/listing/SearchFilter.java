@@ -1,4 +1,4 @@
-package com.example.practice.listing;
+ package com.example.practice.listing;
 
 public class SearchFilter {
 	private String fullName;

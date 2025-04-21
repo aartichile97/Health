@@ -5,12 +5,12 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
-
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
@@ -20,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
@@ -35,7 +36,6 @@ import com.example.practice.repository.GenderTableRepository;
 import com.example.practice.repository.PersonalDetailsRepository;
 import com.example.practice.repository.ResponseExcelRepository;
 import com.example.practice.response.ResponseExcel;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -410,7 +410,8 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	private EntityManager entityManager;
 
 	@Override
-	public List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing) {
+//	public List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing) {
+	public List<Map<String, Object>> getPersonalDetails(ProposerListing proposerListing) {
 
 		String sortBy = proposerListing.getSortBy();
 		String sortOrder = proposerListing.getSortOrder();
@@ -465,16 +466,136 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 			typedQuery.setFirstResult((page - 1) * size);
 			typedQuery.setMaxResults(size);
-			return typedQuery.getResultList();
+//			return typedQuery.getResultList();
 		}
 		List<PersonalDetails> resultList = typedQuery.getResultList();
 		int totalSize = resultList.size();
 		totalRecord = totalSize;
-		return typedQuery.getResultList();
+
+		List<Map<String, Object>> result = new ArrayList<>();
+
+		for (PersonalDetails pd : resultList) {
+			Map<String, Object> map = new HashMap<>();
+			map.put("fullName", pd.getFullName());
+			map.put("emailId", pd.getEmailId());
+			map.put("city", pd.getCity());
+
+			result.add(map);
+		}
+
+//		return typedQuery.getResultList();
+		return result;
+
+	}
+
+//	@Override
+//	public void exportPersonalDetailsToExcel(HttpServletResponse response) throws IOException {
+//		List<PersonalDetails> personalDetailsList = personalDetailsRepository.findAll();
+//
+//		XSSFWorkbook workbook = new XSSFWorkbook();
+//
+//		XSSFSheet sheet = workbook.createSheet("PersonalDetails");
+//
+//		Row headerRow = sheet.createRow(0);
+//		String[] headers = {"Title", "Full Name", "Date of Birth", "PAN Number", "Gender",
+//				"Marital Status", "Nationality", "Occupation", "Email ID", "Mobile No", "Alternate Mobile No",
+//				"Address", "Pincode", "City", "State", "Status", "Created At", "Updated At", "Gender ID" };
+//
+//		for (int i = 0; i < headers.length; i++) {
+//			headerRow.createCell(i).setCellValue(headers[i]);
+//		}
+//
+//		int rowNum = 1;
+//		for (PersonalDetails personalDetails : personalDetailsList) {
+//			Row row = sheet.createRow(rowNum++);
+////			row.createCell(0).setCellValue(personalDetails.getPersonalId());
+//			row.createCell(0).setCellValue(personalDetails.getTitle());
+//			row.createCell(1).setCellValue(personalDetails.getFullName());
+//			row.createCell(2).setCellValue(
+//					personalDetails.getDateOfBirth() != null ? personalDetails.getDateOfBirth().toString() : "");
+//			row.createCell(3).setCellValue(personalDetails.getPanNumber());
+//			row.createCell(4)
+//					.setCellValue(personalDetails.getGender() != null ? personalDetails.getGender().toString() : "");
+//			row.createCell(5).setCellValue(
+//					personalDetails.getMaritalStatus() != null ? personalDetails.getMaritalStatus().toString() : "");
+//			row.createCell(6).setCellValue(
+//					personalDetails.getNationality() != null ? personalDetails.getNationality().toString() : "");
+//			row.createCell(7).setCellValue(
+//					personalDetails.getOccupation() != null ? personalDetails.getOccupation().toString() : "");
+//			row.createCell(8).setCellValue(personalDetails.getEmailId());
+//			row.createCell(9).setCellValue(personalDetails.getMobileNo());
+//			row.createCell(10).setCellValue(personalDetails.getAlternateMobileNo());
+//			row.createCell(11).setCellValue(personalDetails.getAddress());
+//			row.createCell(12).setCellValue(personalDetails.getPincode());
+//			row.createCell(13).setCellValue(personalDetails.getCity());
+//			row.createCell(14).setCellValue(personalDetails.getState());
+//			row.createCell(15)
+//					.setCellValue(personalDetails.getStatus() != null ? personalDetails.getStatus().toString() : "");
+//			row.createCell(16).setCellValue(
+//					personalDetails.getCreatedAt() != null ? personalDetails.getCreatedAt().toString() : "");
+//			row.createCell(17).setCellValue(
+//					personalDetails.getUpdatedAt() != null ? personalDetails.getUpdatedAt().toString() : "");
+//			row.createCell(18).setCellValue(personalDetails.getGenderId() != null ? personalDetails.getGenderId() : 0);
+//		}
+//
+//		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+//		response.setHeader("Content-Disposition", "attachment; filename=personal_details.xlsx");
+//
+//		workbook.write(response.getOutputStream());
+//		workbook.close();
+//	}
+	@Override
+	@Scheduled(fixedRate = 5000)
+	public void exportPersonalDetailsToExcel() throws IOException {
+		List<PersonalDetails> personalDetailsList = personalDetailsRepository.findAll();
+
+		XSSFWorkbook workbook = new XSSFWorkbook();
+		XSSFSheet sheet = workbook.createSheet("PersonalDetails");
+
+		Row headerRow = sheet.createRow(0);
+		String[] headers = { "Title", "Full Name", "Date of Birth", "PAN Number", "Gender", "Marital Status",
+				"Nationality", "Occupation", "Email ID", "Mobile No", "Alternate Mobile No", "Address", "Pincode",
+				"City", "State", "Status", "Created At", "Updated At", "Gender ID" };
+
+		for (int i = 0; i < headers.length; i++) {
+			headerRow.createCell(i).setCellValue(headers[i]);
+		}
+
+		int rowNum = 1;
+		for (PersonalDetails pd : personalDetailsList) {
+			Row row = sheet.createRow(rowNum++);
+			row.createCell(0).setCellValue(pd.getTitle());
+			row.createCell(1).setCellValue(pd.getFullName());
+			row.createCell(2).setCellValue(pd.getDateOfBirth() != null ? pd.getDateOfBirth().toString() : "");
+			row.createCell(3).setCellValue(pd.getPanNumber());
+			row.createCell(4).setCellValue(pd.getGender() != null ? pd.getGender().toString() : "");
+			row.createCell(5).setCellValue(pd.getMaritalStatus() != null ? pd.getMaritalStatus().toString() : "");
+			row.createCell(6).setCellValue(pd.getNationality() != null ? pd.getNationality().toString() : "");
+			row.createCell(7).setCellValue(pd.getOccupation() != null ? pd.getOccupation().toString() : "");
+			row.createCell(8).setCellValue(pd.getEmailId());
+			row.createCell(9).setCellValue(pd.getMobileNo());
+			row.createCell(10).setCellValue(pd.getAlternateMobileNo());
+			row.createCell(11).setCellValue(pd.getAddress());
+			row.createCell(12).setCellValue(pd.getPincode());
+			row.createCell(13).setCellValue(pd.getCity());
+			row.createCell(14).setCellValue(pd.getState());
+			row.createCell(15).setCellValue(pd.getStatus() != null ? pd.getStatus().toString() : "");
+			row.createCell(16).setCellValue(pd.getCreatedAt() != null ? pd.getCreatedAt().toString() : "");
+			row.createCell(17).setCellValue(pd.getUpdatedAt() != null ? pd.getUpdatedAt().toString() : "");
+			row.createCell(18).setCellValue(pd.getGenderId() != null ? pd.getGenderId() : 0);
+		}
+
+		String fileName = "personal_details_" + System.currentTimeMillis() + ".xlsx";
+		FileOutputStream out = new FileOutputStream("C:\\download\\sample_" + fileName);
+		workbook.write(out);
+		workbook.close();
+		out.close();
+
+		System.out.println("Excel exported " + fileName);
 	}
 
 	@Override
-	public String exportPersonalDetailsToExcel() throws IOException {
+	public String exportSamplePersonalDetailsToExcel() throws IOException {
 		XSSFWorkbook workbook = new XSSFWorkbook();
 		XSSFSheet sheet = workbook.createSheet("PersonalDetails");
 
@@ -500,12 +621,13 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	}
 
 	@Override
-	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount) throws IOException {
+	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
+			throws IOException {
 		List<PersonalDetails> savedExcelList = new ArrayList<>();
 
 		recordCount.put("totalExcelCount", 0);
 		recordCount.put("errorExcelCount", 0);
-		
+
 		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
 			XSSFSheet sheet = workbook.getSheetAt(0);
 
@@ -528,7 +650,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 				if (isEmptyRow)
 					continue;
 
-				recordCount.put("totalExcelCount", recordCount.get("totalExcelCount")+1);
+				recordCount.put("totalExcelCount", recordCount.get("totalExcelCount") + 1);
 
 				PersonalDetails entity = new PersonalDetails();
 
@@ -546,7 +668,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setUpdateMessage("Invalid full name");
 					response.setUpdateMessage(fullName);
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				} else {
 					entity.setFullName(fullName);
@@ -559,7 +681,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Date Of Birth");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 
 					continue;
 				} else {
@@ -573,7 +695,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Pan Number");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 
 					continue;
 				} else {
@@ -594,7 +716,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Gender");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 
 					continue;
 				} else {
@@ -674,7 +796,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Email");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 
 					continue;
 				} else {
@@ -688,7 +810,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Mobile Number");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				} else {
 					entity.setMobileNo(mobileNumber);
@@ -709,7 +831,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid address");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				}
 				entity.setAddress(address);
@@ -721,7 +843,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid Pincode");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				}
 				entity.setPincode(pincode);
@@ -733,7 +855,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid City");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				} else {
 					entity.setCity(city);
@@ -746,7 +868,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					response.setError("Invalid State");
 					response.setUpdateMessage("Failure!!");
 					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount")+1);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
 					continue;
 				} else {
 					entity.setState(state);

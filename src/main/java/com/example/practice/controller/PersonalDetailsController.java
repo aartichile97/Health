@@ -1,5 +1,6 @@
 package com.example.practice.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +23,7 @@ import com.example.practice.entity.PersonalDetails;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
-
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/personal_details/")
@@ -146,7 +147,9 @@ public class PersonalDetailsController {
 	public ResponseHandler getPersonalDetails(@RequestBody ProposerListing proposerListing) {
 //		ResponseHandler response = new ResponseHandler();
 		try {
-			List<PersonalDetails> personalDetailsList = personalDetailsService.getPersonalDetails(proposerListing);
+//			List<PersonalDetails> personalDetailsList = personalDetailsService.getPersonalDetails(proposerListing);
+			List<Map<String, Object>> personalDetailsList = personalDetailsService.getPersonalDetails(proposerListing);
+
 			response.setStatus(true);
 			response.setTotalRecords(personalDetailsService.totalRecords());
 			response.setData(personalDetailsList);
@@ -164,11 +167,32 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@GetMapping("export_personal_details")
-	public ResponseHandler exportPersonalDetailsToExcel() {
+//	@GetMapping("export_personal_details")
+//	public ResponseHandler exportPersonalDetailsToExcel(HttpServletResponse servletResponse) {
+////		ResponseHandler response = new ResponseHandler();
+//		try {
+//			personalDetailsService.exportPersonalDetailsToExcel(servletResponse);
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		return response;
+//	}
+	@GetMapping("/export_personal_details")
+	public void exportPersonalDetailsToExcel() {
+		try {
+			// Manually invoke the scheduled task method
+			personalDetailsService.exportPersonalDetailsToExcel();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@GetMapping("export_sample_personal_details")
+	public ResponseHandler exportSamplePersonalDetailsToExcel() {
 //		ResponseHandler response = new ResponseHandler();
 		try {
-			String downloadLink = personalDetailsService.exportPersonalDetailsToExcel();
+			String downloadLink = personalDetailsService.exportSamplePersonalDetailsToExcel();
 			response.setData(downloadLink);
 			response.setMessage("Downloaded");
 			response.setStatus(true);
@@ -182,33 +206,33 @@ public class PersonalDetailsController {
 	}
 
 	@PostMapping(value = "import_personal_details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-	public ResponseHandler importPersonalDetails(
-	        @RequestParam("file") MultipartFile file) {
+	public ResponseHandler importPersonalDetails(@RequestParam("file") MultipartFile file) {
 
-	    ResponseHandler response = new ResponseHandler();
-	    
-	    try {
-	    	
-	    	Map<String, Integer> recordCount = new HashMap<>();
-	        List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file, recordCount);
+		ResponseHandler response = new ResponseHandler();
 
-	        Integer totalExcelCount = recordCount.getOrDefault("totalExcelCount", 0);
-	        Integer errorExcelCount = recordCount.getOrDefault("errorExcelCount", 0);
-	        
-	        response.setData(savedExcelList);
+		try {
+
+			Map<String, Integer> recordCount = new HashMap<>();
+			List<PersonalDetails> savedExcelList = personalDetailsService.importPersonalDetailsFromExcel(file,
+					recordCount);
+			Integer totalExcelCount = recordCount.getOrDefault("totalExcelCount", 0);
+			Integer errorExcelCount = recordCount.getOrDefault("errorExcelCount", 0);
+
+			response.setData(savedExcelList);
 //	        response.setMessage("Excel imported successfully. Rows saved: " +savedExcelList.size());
 //	        response.setMessage("Successfully saved " +savedExcelList.size()  +" & failed records "+errorExcelCount+ " rows out of "+totalExcelCount);
-	        response.setMessage("Out of " +totalExcelCount +" , "+savedExcelList.size()+" Saved "+errorExcelCount+ " Failed ");
+			response.setMessage("Out of " + totalExcelCount + " , " + savedExcelList.size() + " Saved "
+					+ errorExcelCount + " Failed ");
 
-	        response.setStatus(true);
+			response.setStatus(true);
 			response.setTotalRecords(totalExcelCount);
 //			response.setTotalRecords(personalDetailsService.totalRecords());
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	        response.setMessage("Failed to import excel file");
-	        response.setStatus(false);
-	        response.setData(new ArrayList<>());
-	    }
-	    return response;
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setMessage("Failed to import excel file");
+			response.setStatus(false);
+			response.setData(new ArrayList<>());
+		}
+		return response;
 	}
 }

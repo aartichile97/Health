@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
 import com.example.practice.listing.ProposerListing;
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface PersonalDetailsService {
 
@@ -21,14 +22,18 @@ public interface PersonalDetailsService {
 
 	void deletePersonalDetails(Integer personalId);
 
-	List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing);
+//	List<PersonalDetails> getPersonalDetails(ProposerListing proposerListing);
+	List<Map<String, Object>> getPersonalDetails(ProposerListing proposerListing);
 
 	Integer totalRecords();
+
 //	Integer failedRecords();
+	void exportPersonalDetailsToExcel() throws IOException;
 
-	String exportPersonalDetailsToExcel() throws IOException;
+	String exportSamplePersonalDetailsToExcel() throws IOException;
 
-	public List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount) throws IOException;
+	List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
+			throws IOException;
 //	public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
-	
+
 }
