@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
+import com.example.practice.entity.Product;
 import com.example.practice.listing.ProposerListing;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -35,5 +36,7 @@ public interface PersonalDetailsService {
 	List<PersonalDetails> importPersonalDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
 			throws IOException;
 //	public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
-
+	public List<Map<String, Object>> getAllProducts();
+	
+	Map<String, Object> integrateProductWithPersonalDetails(Integer personalId);
 }

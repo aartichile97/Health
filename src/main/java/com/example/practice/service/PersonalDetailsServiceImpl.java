@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.Gender;
@@ -30,6 +32,7 @@ import com.example.practice.entity.MaritalStatus;
 import com.example.practice.entity.Nationality;
 import com.example.practice.entity.Occupation;
 import com.example.practice.entity.PersonalDetails;
+import com.example.practice.entity.Product;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.listing.SearchFilter;
 import com.example.practice.repository.GenderTableRepository;
@@ -923,6 +926,60 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 		} else {
 			return "";
 		}
+	}
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+    private static final String PRODUCT_API_URL = "https://fakestoreapi.com/products";
+//	private static final String PRODUCT_API_URL = "https://dummyjson.com/products";
+	@Override
+	public List<Map<String, Object>> getAllProducts() {
+		return restTemplate.getForObject(PRODUCT_API_URL, List.class);
+	}
+
+//	@Override
+//	public List<Map<String, Object>> getAllProducts() {
+//		String apiUrl = "https://dummyjson.com/products";
+//		// String apiUrl = "https://fakestoreapi.com/products";
+//
+//		Object response = restTemplate.getForObject(apiUrl, Object.class);
+//
+//		if (response instanceof List) {
+//			return (List<Map<String, Object>>) response;
+//		}
+//
+//		if (response instanceof Map) {
+//			Map<?, ?> mapResponse = (Map<?, ?>) response;
+//			for (Object value : mapResponse.values()) {
+//				if (value instanceof List) {
+//					return (List<Map<String, Object>>) value;
+//				}
+//			}
+//		}
+//		return Collections.emptyList();
+//	}
+	@Override
+	public Map<String, Object> integrateProductWithPersonalDetails(Integer personalId) {
+	    Optional<PersonalDetails> optionalDetails = personalDetailsRepository.findById(personalId);
+
+	    if (optionalDetails.isPresent()) {
+	        PersonalDetails details = optionalDetails.get();
+
+	        String productUrl = PRODUCT_API_URL + "/" + personalId;
+
+	        Map<String, Object> product = restTemplate.getForObject(productUrl, Map.class);
+	        Map<String, Object> response = new HashMap<>();
+	        
+	        response.put("personalDetails", details);
+	        response.put("product", product);
+
+	        return response;
+	    } else {
+	        return new HashMap<>();
+	    }
+	
+
 	}
 
 }

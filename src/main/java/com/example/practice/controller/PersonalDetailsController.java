@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
+import com.example.practice.entity.Product;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
@@ -235,4 +236,46 @@ public class PersonalDetailsController {
 		}
 		return response;
 	}
+	
+//	@GetMapping("/products")
+//    public List<Map<String, Object>> getProducts() {
+//        return personalDetailsService.getAllProducts();
+//    }
+	
+	@GetMapping("/products")
+	public ResponseHandler getProducts() {
+	    ResponseHandler response = new ResponseHandler();
+	    try {
+	        List<Map<String, Object>> products = personalDetailsService.getAllProducts();
+
+	        response.setData(products);
+	        response.setMessage("Products retrieved successfully.");
+	        response.setStatus(true);
+	        response.setTotalRecords(products.size());
+
+	    } catch (Exception e) {
+	        response.setData(new ArrayList<>());
+	        response.setMessage("Failed to fetch products: " + e.getMessage());
+	        response.setStatus(false);
+	    }
+	    return response;
+	}
+	
+	@GetMapping("/person/{id}/integrate-product")
+	public ResponseHandler getProductForPersonalDetails(@PathVariable("id") Integer id) {
+	    ResponseHandler response = new ResponseHandler();
+	    Map<String, Object> details = personalDetailsService.integrateProductWithPersonalDetails(id);
+
+	    if (details != null) {
+	        response.setData(details);
+	        response.setMessage("Product integrated successfully.");
+	        response.setStatus(true);
+	    } else {
+	        response.setStatus(false);
+	        response.setMessage("PersonalDetails not found for id " + id);
+	    }
+	    return response;
+	}
+
+
 }
