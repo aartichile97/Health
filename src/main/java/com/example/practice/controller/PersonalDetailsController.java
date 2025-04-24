@@ -236,46 +236,59 @@ public class PersonalDetailsController {
 		}
 		return response;
 	}
-	
+
 //	@GetMapping("/products")
 //    public List<Map<String, Object>> getProducts() {
 //        return personalDetailsService.getAllProducts();
 //    }
-	
+
 	@GetMapping("/products")
 	public ResponseHandler getProducts() {
-	    ResponseHandler response = new ResponseHandler();
-	    try {
-	        List<Map<String, Object>> products = personalDetailsService.getAllProducts();
+		ResponseHandler response = new ResponseHandler();
+		try {
+			List<Map<String, Object>> products = personalDetailsService.getAllProducts();
 
-	        response.setData(products);
-	        response.setMessage("Products retrieved successfully.");
-	        response.setStatus(true);
-	        response.setTotalRecords(products.size());
+			response.setData(products);
+			response.setMessage("Products retrieved successfully.");
+			response.setStatus(true);
+			response.setTotalRecords(products.size());
 
-	    } catch (Exception e) {
-	        response.setData(new ArrayList<>());
-	        response.setMessage("Failed to fetch products: " + e.getMessage());
-	        response.setStatus(false);
-	    }
-	    return response;
+		} catch (Exception e) {
+			response.setData(new ArrayList<>());
+			response.setMessage("Failed to fetch products: " + e.getMessage());
+			response.setStatus(false);
+		}
+		return response;
 	}
 	
-	@GetMapping("/person/{id}/integrate-product")
-	public ResponseHandler getProductForPersonalDetails(@PathVariable("id") Integer id) {
-	    ResponseHandler response = new ResponseHandler();
-	    Map<String, Object> details = personalDetailsService.integrateProductWithPersonalDetails(id);
+	
+	
+	@PostMapping(value = "import_schedule_personal_details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseHandler importSchedulePersonalDetails(@RequestParam("file") MultipartFile file) {
 
-	    if (details != null) {
-	        response.setData(details);
-	        response.setMessage("Product integrated successfully.");
-	        response.setStatus(true);
-	    } else {
-	        response.setStatus(false);
-	        response.setMessage("PersonalDetails not found for id " + id);
-	    }
-	    return response;
+		ResponseHandler response = new ResponseHandler();
+
+		try {
+
+			Map<String, Integer> recordCount = new HashMap<>();
+			List<PersonalDetails> savedExcelList = personalDetailsService.importScheduleDetailsFromExcel(file,
+					recordCount);
+			Integer totalExcelCount = recordCount.getOrDefault("totalExcelCount", 0);
+			Integer errorExcelCount = recordCount.getOrDefault("errorExcelCount", 0);
+
+			response.setData(savedExcelList);
+			response.setMessage("Out of " + totalExcelCount + " , " + savedExcelList.size() + " Saved "
+					+ errorExcelCount + " Failed ");
+
+			response.setStatus(true);
+			response.setTotalRecords(totalExcelCount);
+		} catch (Exception e) {
+			e.printStackTrace();
+			response.setMessage("Failed to import excel file");
+			response.setStatus(false);
+			response.setData(new ArrayList<>());
+		}
+		return response;
 	}
-
 
 }

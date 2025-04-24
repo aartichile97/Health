@@ -33,10 +33,12 @@ import com.example.practice.entity.Nationality;
 import com.example.practice.entity.Occupation;
 import com.example.practice.entity.PersonalDetails;
 import com.example.practice.entity.Product;
+import com.example.practice.entity.QueueTable;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.listing.SearchFilter;
 import com.example.practice.repository.GenderTableRepository;
 import com.example.practice.repository.PersonalDetailsRepository;
+import com.example.practice.repository.QueueTableRepository;
 import com.example.practice.repository.ResponseExcelRepository;
 import com.example.practice.response.ResponseExcel;
 import jakarta.persistence.EntityManager;
@@ -49,7 +51,13 @@ import jakarta.persistence.criteria.Root;
 @Service
 public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
+    private final QueueTableRepository queueTableRepository;
+
 	Integer totalRecord = 0;
+
+    PersonalDetailsServiceImpl(QueueTableRepository queueTableRepository) {
+        this.queueTableRepository = queueTableRepository;
+    }
 
 	@Override
 	public Integer totalRecords() {
@@ -931,55 +939,267 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	@Autowired
 	private RestTemplate restTemplate;
 
-    private static final String PRODUCT_API_URL = "https://fakestoreapi.com/products";
+	private static final String PRODUCT_API_URL = "https://fakestoreapi.com/products";
+
 //	private static final String PRODUCT_API_URL = "https://dummyjson.com/products";
 	@Override
 	public List<Map<String, Object>> getAllProducts() {
 		return restTemplate.getForObject(PRODUCT_API_URL, List.class);
 	}
 
-//	@Override
-//	public List<Map<String, Object>> getAllProducts() {
-//		String apiUrl = "https://dummyjson.com/products";
-//		// String apiUrl = "https://fakestoreapi.com/products";
-//
-//		Object response = restTemplate.getForObject(apiUrl, Object.class);
-//
-//		if (response instanceof List) {
-//			return (List<Map<String, Object>>) response;
-//		}
-//
-//		if (response instanceof Map) {
-//			Map<?, ?> mapResponse = (Map<?, ?>) response;
-//			for (Object value : mapResponse.values()) {
-//				if (value instanceof List) {
-//					return (List<Map<String, Object>>) value;
-//				}
-//			}
-//		}
-//		return Collections.emptyList();
-//	}
 	@Override
-	public Map<String, Object> integrateProductWithPersonalDetails(Integer personalId) {
-	    Optional<PersonalDetails> optionalDetails = personalDetailsRepository.findById(personalId);
-
-	    if (optionalDetails.isPresent()) {
-	        PersonalDetails details = optionalDetails.get();
-
-	        String productUrl = PRODUCT_API_URL + "/" + personalId;
-
-	        Map<String, Object> product = restTemplate.getForObject(productUrl, Map.class);
-	        Map<String, Object> response = new HashMap<>();
-	        
-	        response.put("personalDetails", details);
-	        response.put("product", product);
-
-	        return response;
-	    } else {
-	        return new HashMap<>();
-	    }
+	public List<PersonalDetails> importScheduleDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
+			throws IOException {
 	
+		List<PersonalDetails> savedExcelList = new ArrayList<>();
+		recordCount.put("totalExcelCount", 0);
+		recordCount.put("errorExcelCount", 0);
+		
+		int validRecords = 0;
 
+		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
+			XSSFSheet sheet = workbook.getSheetAt(0);
+
+			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+				ResponseExcel response = new ResponseExcel();
+				XSSFRow row = sheet.getRow(i);
+				// if (row == null) {
+				// continue;
+				// }
+				boolean isEmptyRow = true;
+				for (int j = row.getFirstCellNum(); j < row.getLastCellNum(); j++) {
+					XSSFCell cell = row.getCell(j);
+					if (cell != null && cell.getCellType() != CellType.BLANK
+							&& (cell.getCellType() != CellType.STRING || !cell.getStringCellValue().trim().isEmpty())) {
+						isEmptyRow = false;
+						break;
+					}
+				}
+
+				if (isEmptyRow)
+					continue;
+
+				recordCount.put("totalExcelCount", recordCount.get("totalExcelCount") + 1);
+
+				PersonalDetails entity = new PersonalDetails();
+
+				String title = getCellString(row.getCell(0));
+
+				if (title != null && !title.trim().isEmpty()) {
+					entity.setTitle(title);
+					// continue;
+				}
+
+				String fullName = getCellString(row.getCell(1));
+				if (fullName == null || fullName.trim().isEmpty() || !fullName.matches("[a-zA-Z\\s]+")) {
+					response.setErrorField("fullName");
+					response.setStatus(false);
+					response.setUpdateMessage("Invalid full name");
+					response.setUpdateMessage(fullName);
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				} else {
+					entity.setFullName(fullName);
+				}
+
+				String dob = getCellString(row.getCell(2));
+				if (dob == null || dob.trim().isEmpty()) {
+					response.setErrorField("dateOfBirth");
+					response.setStatus(false);
+					response.setError("Invalid Date Of Birth");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+
+					continue;
+				} else {
+					entity.setDateOfBirth(dob);
+				}
+
+				String pan = getCellString(row.getCell(3)).toUpperCase().trim();
+				if (!pan.matches("^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$")) {
+					response.setErrorField("panNumber");
+					response.setStatus(false);
+					response.setError("Invalid Pan Number");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+
+					continue;
+				} else {
+					entity.setPanNumber(pan);
+				}
+
+				String genderString = getCellString(row.getCell(4)).toUpperCase();
+				Gender gender = null;
+				for (Gender g : Gender.values()) {
+					if (g.name().equalsIgnoreCase(genderString)) {
+						gender = g;
+						break;
+					}
+				}
+				if (gender == null) {
+					response.setErrorField("gender");
+					response.setStatus(false);
+					response.setError("Invalid Gender");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+
+					continue;
+				} else {
+					entity.setGender(gender);
+					entity.setGenderId(getGenderId(gender));
+				}
+
+				String maritalStatusStr = getCellString(row.getCell(5)).toUpperCase();
+				MaritalStatus maritalStatus = null;
+				for (MaritalStatus m : MaritalStatus.values()) {
+					if (m.name().equalsIgnoreCase(maritalStatusStr)) {
+						maritalStatus = m;
+						break;
+					}
+				}
+				if (maritalStatus != null) {
+					entity.setMaritalStatus(maritalStatus);
+				}
+
+				String nationalityStr = getCellString(row.getCell(6)).toUpperCase();
+				Nationality nationality = null;
+				for (Nationality n : Nationality.values()) {
+					if (n.name().equalsIgnoreCase(nationalityStr)) {
+						nationality = n;
+						break;
+					}
+				}
+				if (nationality != null) {
+					entity.setNationality(nationality);
+
+				}
+
+				String occupationStr = getCellString(row.getCell(7)).toUpperCase();
+				Occupation occupation = null;
+				for (Occupation o : Occupation.values()) {
+					if (o.name().equalsIgnoreCase(occupationStr)) {
+						occupation = o;
+						break;
+					}
+				}
+				if (occupation != null) {
+					entity.setOccupation(occupation);
+				}
+
+				String email = getCellString(row.getCell(8));
+				if (email == null || !email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
+					response.setErrorField("email");
+					response.setStatus(false);
+					response.setError("Invalid Email");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+
+					continue;
+				} else {
+					entity.setEmailId(email);
+				}
+
+				String mobileNumber = getCellString(row.getCell(9));
+				if (mobileNumber == null || mobileNumber.isEmpty() || !mobileNumber.matches("^[6-9]\\d{9}$")) {
+					response.setErrorField("mobileNumber");
+					response.setStatus(false);
+					response.setError("Invalid Mobile Number");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				} else {
+					entity.setMobileNo(mobileNumber);
+				}
+
+				String alternateMobile = getCellString(row.getCell(10));
+				if (alternateMobile != null && !alternateMobile.trim().isEmpty()
+						&& alternateMobile.matches("^[6-9]\\d{9}$")) {
+					entity.setAlternateMobileNo(alternateMobile);
+					// continue;
+
+				}
+
+				String address = getCellString(row.getCell(11));
+				if (address == null || address.trim().isEmpty()) {
+					response.setErrorField("address");
+					response.setStatus(false);
+					response.setError("Invalid address");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				}
+				entity.setAddress(address);
+
+				String pincode = getCellString(row.getCell(12));
+				if (pincode == null || !pincode.matches("^\\d{6}$")) {
+					response.setErrorField("pincode");
+					response.setStatus(false);
+					response.setError("Invalid Pincode");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				}
+				entity.setPincode(pincode);
+
+				String city = getCellString(row.getCell(13));
+				if (city == null || city.trim().isEmpty()) {
+					response.setErrorField("city");
+					response.setStatus(false);
+					response.setError("Invalid City");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				} else {
+					entity.setCity(city);
+				}
+
+				String state = getCellString(row.getCell(14));
+				if (state == null || state.trim().isEmpty()) {
+					response.setErrorField("state");
+					response.setStatus(false);
+					response.setError("Invalid State");
+					response.setUpdateMessage("Failure!!");
+					responseExcelRepository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				} else {
+					entity.setState(state);
+				}
+
+				entity.setStatus('Y');
+
+				PersonalDetails saved = personalDetailsRepository.save(entity);
+				response.setErrorField(String.valueOf(saved.getPersonalId()));
+				response.setStatus(true);
+				response.setError("No Error");
+				response.setUpdateMessage("Success!!");
+				responseExcelRepository.save(response);
+				savedExcelList.add(saved);
+				validRecords++;
+			}
+		}
+		if (validRecords >= 10) {
+		       QueueTable queue = new QueueTable();
+		       queue.setFilepath(file.getOriginalFilename());
+		       queue.setRowCount(recordCount.get("totalExcelCount"));  
+		       queue.setRowRead(validRecords);
+		       queue.setIsProcessed('N');
+		       queue.setStatus('Y');
+		       queueTableRepository.save(queue);
+		   } else {
+		       throw new IllegalArgumentException("Minimum 10 valid records required to process the file.");
+		   }
+
+		return savedExcelList;
 	}
 
 }

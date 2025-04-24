@@ -37,6 +37,8 @@ public interface PersonalDetailsService {
 			throws IOException;
 //	public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file) throws IOException;
 	public List<Map<String, Object>> getAllProducts();
+	//Queue 
+	public List<PersonalDetails> importScheduleDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
+			throws IOException;
 	
-	Map<String, Object> integrateProductWithPersonalDetails(Integer personalId);
 }
