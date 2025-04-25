@@ -1,11 +1,13 @@
 package com.example.practice.service;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -40,7 +43,9 @@ import com.example.practice.repository.GenderTableRepository;
 import com.example.practice.repository.PersonalDetailsRepository;
 import com.example.practice.repository.QueueTableRepository;
 import com.example.practice.repository.ResponseExcelRepository;
+import com.example.practice.repository.responseExcel2Repository;
 import com.example.practice.response.ResponseExcel;
+import com.example.practice.response.ResponseExcel2;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -51,13 +56,13 @@ import jakarta.persistence.criteria.Root;
 @Service
 public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
-    private final QueueTableRepository queueTableRepository;
+	private final QueueTableRepository queueTableRepository;
 
 	Integer totalRecord = 0;
 
-    PersonalDetailsServiceImpl(QueueTableRepository queueTableRepository) {
-        this.queueTableRepository = queueTableRepository;
-    }
+	PersonalDetailsServiceImpl(QueueTableRepository queueTableRepository) {
+		this.queueTableRepository = queueTableRepository;
+	}
 
 	@Override
 	public Integer totalRecords() {
@@ -79,6 +84,9 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 	@Autowired
 	private ResponseExcelRepository responseExcelRepository;
+
+	@Autowired
+	private responseExcel2Repository responseExcel2Repository;
 
 	@Override
 	public PersonalDetails savePersonalDetails(PersonalDetailsDto personalDetailsDto) {
@@ -556,7 +564,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 //		workbook.close();
 //	}
 	@Override
-	@Scheduled(fixedRate = 5000)
+//	@Scheduled(fixedRate = 5000)
 	public void exportPersonalDetailsToExcel() throws IOException {
 		List<PersonalDetails> personalDetailsList = personalDetailsRepository.findAll();
 
@@ -950,23 +958,25 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	@Override
 	public List<PersonalDetails> importScheduleDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
 			throws IOException {
-	
+
 		List<PersonalDetails> savedExcelList = new ArrayList<>();
 		recordCount.put("totalExcelCount", 0);
 		recordCount.put("errorExcelCount", 0);
-		
 		int validRecords = 0;
 
 		try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
 			XSSFSheet sheet = workbook.getSheetAt(0);
+			int totalRows = sheet.getLastRowNum();
 
-			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-				ResponseExcel response = new ResponseExcel();
+			for (int i = 1; i <= totalRows; i++) {
+				ResponseExcel2 response = new ResponseExcel2();
 				XSSFRow row = sheet.getRow(i);
 				// if (row == null) {
 				// continue;
 				// }
 				boolean isEmptyRow = true;
+				List<String> errorFields = new ArrayList<>();
+
 				for (int j = row.getFirstCellNum(); j < row.getLastCellNum(); j++) {
 					XSSFCell cell = row.getCell(j);
 					if (cell != null && cell.getCellType() != CellType.BLANK
@@ -992,41 +1002,22 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 				String fullName = getCellString(row.getCell(1));
 				if (fullName == null || fullName.trim().isEmpty() || !fullName.matches("[a-zA-Z\\s]+")) {
-					response.setErrorField("fullName");
-					response.setStatus(false);
-					response.setUpdateMessage("Invalid full name");
-					response.setUpdateMessage(fullName);
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("fullName");
 				} else {
 					entity.setFullName(fullName);
 				}
 
 				String dob = getCellString(row.getCell(2));
 				if (dob == null || dob.trim().isEmpty()) {
-					response.setErrorField("dateOfBirth");
-					response.setStatus(false);
-					response.setError("Invalid Date Of Birth");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-
-					continue;
+					errorFields.add("dateOfBirth");
 				} else {
 					entity.setDateOfBirth(dob);
 				}
 
 				String pan = getCellString(row.getCell(3)).toUpperCase().trim();
 				if (!pan.matches("^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$")) {
-					response.setErrorField("panNumber");
-					response.setStatus(false);
-					response.setError("Invalid Pan Number");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					errorFields.add("panNumber");
 
-					continue;
 				} else {
 					entity.setPanNumber(pan);
 				}
@@ -1040,14 +1031,8 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					}
 				}
 				if (gender == null) {
-					response.setErrorField("gender");
-					response.setStatus(false);
-					response.setError("Invalid Gender");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					errorFields.add("gender");
 
-					continue;
 				} else {
 					entity.setGender(gender);
 					entity.setGenderId(getGenderId(gender));
@@ -1092,27 +1077,16 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 				String email = getCellString(row.getCell(8));
 				if (email == null || !email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
-					response.setErrorField("email");
-					response.setStatus(false);
-					response.setError("Invalid Email");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					errorFields.add("email");
 
-					continue;
 				} else {
 					entity.setEmailId(email);
 				}
 
 				String mobileNumber = getCellString(row.getCell(9));
 				if (mobileNumber == null || mobileNumber.isEmpty() || !mobileNumber.matches("^[6-9]\\d{9}$")) {
-					response.setErrorField("mobileNumber");
-					response.setStatus(false);
-					response.setError("Invalid Mobile Number");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("mobileNumber");
+
 				} else {
 					entity.setMobileNo(mobileNumber);
 				}
@@ -1127,79 +1101,103 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 				String address = getCellString(row.getCell(11));
 				if (address == null || address.trim().isEmpty()) {
-					response.setErrorField("address");
-					response.setStatus(false);
-					response.setError("Invalid address");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("address");
+
 				}
 				entity.setAddress(address);
 
 				String pincode = getCellString(row.getCell(12));
 				if (pincode == null || !pincode.matches("^\\d{6}$")) {
-					response.setErrorField("pincode");
-					response.setStatus(false);
-					response.setError("Invalid Pincode");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("pincode");
+
 				}
 				entity.setPincode(pincode);
 
 				String city = getCellString(row.getCell(13));
 				if (city == null || city.trim().isEmpty()) {
-					response.setErrorField("city");
-					response.setStatus(false);
-					response.setError("Invalid City");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("city");
+
 				} else {
 					entity.setCity(city);
 				}
 
 				String state = getCellString(row.getCell(14));
 				if (state == null || state.trim().isEmpty()) {
-					response.setErrorField("state");
-					response.setStatus(false);
-					response.setError("Invalid State");
-					response.setUpdateMessage("Failure!!");
-					responseExcelRepository.save(response);
-					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-					continue;
+					errorFields.add("state");
+
 				} else {
 					entity.setState(state);
 				}
 
 				entity.setStatus('Y');
+				if (!errorFields.isEmpty()) {
+					response.setErrorField(String.join(", ", errorFields));
+					response.setError("Invalid Mandatory fields");
+					response.setStatus(false);
+					response.setUpdateMessage("Failure!!");
+					responseExcel2Repository.save(response);
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+					continue;
+				}
 
 				PersonalDetails saved = personalDetailsRepository.save(entity);
-				response.setErrorField(String.valueOf(saved.getPersonalId()));
-				response.setStatus(true);
-				response.setError("No Error");
-				response.setUpdateMessage("Success!!");
-				responseExcelRepository.save(response);
 				savedExcelList.add(saved);
 				validRecords++;
 			}
 		}
-		if (validRecords >= 10) {
-		       QueueTable queue = new QueueTable();
-		       queue.setFilepath(file.getOriginalFilename());
-		       queue.setRowCount(recordCount.get("totalExcelCount"));  
-		       queue.setRowRead(validRecords);
-		       queue.setIsProcessed('N');
-		       queue.setStatus('Y');
-		       queueTableRepository.save(queue);
-		   } else {
-		       throw new IllegalArgumentException("Minimum 10 valid records required to process the file.");
-		   }
-
+		if (validRecords >= 5) {
+			QueueTable queue = new QueueTable();
+			queue.setFilepath(file.getOriginalFilename());
+			queue.setRowCount(recordCount.get("totalExcelCount"));
+			queue.setRowRead(validRecords);
+			queue.setIsProcessed('N');
+			queue.setStatus('Y');
+			queueTableRepository.save(queue);
+			
+			queue.setIsProcessed('Y');
+			queueTableRepository.save(queue);
+		} else {
+			throw new IllegalArgumentException("Minimum 5 valid records required to process the file.");
+		}
 		return savedExcelList;
+	}
+
+	@Scheduled(fixedRate = 120000)
+	public void processPendingRecords() throws Exception {
+		System.out.println("Scheduler running at: " + LocalDateTime.now());
+		List<QueueTable> pendingQueueEntries = queueTableRepository.findByIsProcessed('N');
+
+		if (pendingQueueEntries.isEmpty()) {
+			return;
+		}
+
+		for (QueueTable queue : pendingQueueEntries) {
+			File file = new File(queue.getFilepath());
+
+			// Skip non-existing files
+			if (!file.exists()) {
+				continue;
+			}
+
+			Map<String, Integer> recordCounts = new HashMap<>();
+			FileInputStream fileInputStream = new FileInputStream(file);
+			MockMultipartFile multipartFile = new MockMultipartFile("file", file.getName(), "application/vnd.ms-excel",
+					fileInputStream);
+
+			List<PersonalDetails> savedDetails = importPersonalDetailsFromExcel(multipartFile, recordCounts);
+
+			if (!savedDetails.isEmpty()) {
+				queue.setIsProcessed('Y');
+				queue.setRowRead(recordCounts.get("totalExcelCount"));
+				queue.setStatus('Y');
+			} else {
+				queue.setStatus('N');
+			}
+
+			queueTableRepository.save(queue);
+
+			fileInputStream.close();
+		}
 	}
 
 }
