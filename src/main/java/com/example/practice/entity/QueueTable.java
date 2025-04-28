@@ -31,13 +31,8 @@ public class QueueTable {
 	@Column(name = "filepath")
 	private String filepath;
 
-	public String getFilepath() {
-		return filepath;
-	}
-
-	public void setFilepath(String filepath) {
-		this.filepath = filepath;
-	}
+	@Column(name = "last_processed_row")
+	private Integer lastProcessedRow;
 
 	public QueueTable() {
 		super();
@@ -82,6 +77,22 @@ public class QueueTable {
 
 	public void setStatus(Character status) {
 		this.status = status;
+	}
+
+	public String getFilepath() {
+		return filepath;
+	}
+
+	public void setFilepath(String filepath) {
+		this.filepath = filepath;
+	}
+
+	public Integer getLastProcessedRow() {
+		return lastProcessedRow;
+	}
+
+	public void setLastProcessedRow(Integer lastProcessedRow) {
+		this.lastProcessedRow = lastProcessedRow;
 	}
 
 }

@@ -47,7 +47,7 @@ public interface PersonalDetailsService {
 
 	// public List<ResponseExcel> importPersonalDetailsFromExcel(MultipartFile file)
 	// throws IOException;
-	
+
 	// fetching third party API details
 	public List<Map<String, Object>> getAllProducts();
 
@@ -55,5 +55,7 @@ public interface PersonalDetailsService {
 	// importing details from excel to DB using scheduling
 	public List<PersonalDetails> importScheduleDetailsFromExcel(MultipartFile file, Map<String, Integer> recordCount)
 			throws IOException;
+	
+	void scheduleQueueProcessing();
 
 }
