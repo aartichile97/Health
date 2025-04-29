@@ -20,11 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
-import com.example.practice.entity.Product;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
-import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/personal_details/")

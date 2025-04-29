@@ -27,6 +27,9 @@ public class ResponseExcel2 {
 	@Column(name = "error_field")
 	private String errorField;
 
+	@Column(name = "queue_id")
+	private Integer queueId;
+
 	public ResponseExcel2() {
 		super();
 	}
@@ -66,9 +69,16 @@ public class ResponseExcel2 {
 	public String getErrorField() {
 		return errorField;
 	}
-	
+
 	public void setErrorField(String errorField) {
 		this.errorField = errorField;
 	}
 
+	public Integer getQueueId() {
+		return queueId;
+	}
+
+	public void setQueueId(Integer queueId) {
+		this.queueId = queueId;
+	}
 }

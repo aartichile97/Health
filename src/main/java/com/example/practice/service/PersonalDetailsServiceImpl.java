@@ -981,10 +981,6 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 		XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream());
 		XSSFSheet sheet = workbook.getSheetAt(0);
-		QueueTable queue = new QueueTable();
-		queue.setIsProcessed('N');
-		queue.setStatus('Y');
-		queue.setLastProcessedRow(0);
 
 		int realRowCount = 0;
 		for (int i = 1; i <= sheet.getLastRowNum(); i++) {
@@ -1006,12 +1002,17 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 				realRowCount++;
 			}
 		}
-		queue.setRowCount(realRowCount);
-		queue.setRowRead(0);
-		queue.setFilepath(filePath);
-		file.transferTo(new File(filePath));
+
+		QueueTable queue = new QueueTable();
 
 		if (realRowCount >= 5) {
+			queue.setIsProcessed('N');
+			queue.setStatus('Y');
+			queue.setLastProcessedRow(0);
+			queue.setRowCount(realRowCount);
+			queue.setRowRead(0);
+			queue.setFilepath(filePath);
+			file.transferTo(new File(filePath));
 			queueTableRepository.save(queue);
 
 			Map<String, Object> scheduledResponse = new HashMap<>();
@@ -1173,14 +1174,18 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 				entity.setState(state);
 			}
 
-			entity.setStatus('Y');
 			if (!errorFields.isEmpty()) {
-				response.setErrorField(String.join(", ", errorFields));
-				response.setError("Invalid Mandatory fields");
-				response.setStatus(false);
-				response.setUpdateMessage("Failure!!");
-				responseExcel2Repository.save(response);
-				recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+				for (String field : errorFields) {
+					ResponseExcel2 response2 = new ResponseExcel2();
+					response2.setError("Invalid field " + field);
+					response2.setErrorField(field);
+					response2.setStatus(false);
+					response2.setUpdateMessage("Failure!!");
+					response2.setQueueId(queue.getQueueId());
+					responseExcel2Repository.save(response2);
+
+					recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+				}
 				continue;
 			}
 
@@ -1195,9 +1200,11 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 	@Override
 	@Scheduled(fixedDelay = 10000)
 	public void scheduleQueueProcessing() {
-		Optional<QueueTable> queueTableOpt = queueTableRepository.findByIsProcessed('N');
-		if (queueTableOpt.isPresent()) {
-			QueueTable queue = queueTableOpt.get();
+//		Optional<QueueTable> queueTableOpt = queueTableRepository.findByIsProcessed('N');
+		List<QueueTable> queueTableOpt = queueTableRepository.findByIsProcessed('N');
+//		if (queueTableOpt.isPresent()) {
+//			QueueTable queue = queueTableOpt.get();
+		for (QueueTable queue : queueTableOpt) {
 			int lastProcessedRow = queue.getRowRead() != null ? queue.getRowRead() : 0;
 			String filePath = queue.getFilepath();
 			File file = new File(filePath);
@@ -1220,7 +1227,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 					while (rowIterator.hasNext()) {
 						Row row = rowIterator.next();
 						if (isFirstRow) {
-							isFirstRow = false; // Skip header row
+							isFirstRow = false;
 							continue;
 						}
 						boolean isEmptyRow = true;
@@ -1244,7 +1251,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 
 					int realRowSeen = 0;
 
-					for (int i = 1; i <= sheet.getLastRowNum(); i++) { 
+					for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 						XSSFRow row = sheet.getRow(i);
 						if (row == null)
 							continue;
@@ -1269,7 +1276,7 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 						if (realRowSeen > endRow)
 							break;
 
-						ResponseExcel2 response = new ResponseExcel2();
+//						ResponseExcel2 response = new ResponseExcel2();
 						PersonalDetails entity = new PersonalDetails();
 						List<String> errorFields = new ArrayList<>();
 
@@ -1395,12 +1402,17 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 						entity.setStatus('Y');
 
 						if (!errorFields.isEmpty()) {
-							response.setErrorField(String.join(", ", errorFields));
-							response.setError("Invalid Mandatory fields");
-							response.setStatus(false);
-							response.setUpdateMessage("Failure!!");
-							responseExcel2Repository.save(response);
-							recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+							for (String field : errorFields) {
+								ResponseExcel2 response2 = new ResponseExcel2();
+								response2.setError("Invalid field " + field);
+								response2.setErrorField(field);
+								response2.setStatus(false);
+								response2.setUpdateMessage("Failure!!");
+								response2.setQueueId(queue.getQueueId());
+								responseExcel2Repository.save(response2);
+
+								recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
+							}
 							continue;
 						}
 
@@ -1427,221 +1439,5 @@ public class PersonalDetailsServiceImpl implements PersonalDetailsService {
 			}
 		}
 	}
-//	@Override
-//	@Scheduled(fixedDelay = 10000)
-//	public void scheduleQueueProcessing() {
-//		Optional<QueueTable> queueTableOpt = queueTableRepository.findByIsProcessed('N');
-//		if (queueTableOpt.isPresent()) {
-//			QueueTable queue = queueTableOpt.get();
-//			int lastProcessedRow = queue.getRowRead() != null ? queue.getRowRead() : 0;
-//			String filePath = queue.getFilepath();
-//			File file = new File(filePath);
-//
-//			if (file.exists()) {
-//				Map<String, Integer> recordCount = new HashMap<>();
-//				recordCount.put("totalExcelCount", 0);
-//				recordCount.put("errorExcelCount", 0);
-//
-//				List<PersonalDetails> savedExcelList = new ArrayList<>();
-//
-//				try (FileInputStream fileInputStream = new FileInputStream(file);
-//						XSSFWorkbook workbook = new XSSFWorkbook(fileInputStream)) {
-//
-//					XSSFSheet sheet = workbook.getSheetAt(0);
-//					int totalRows = sheet.getLastRowNum();
-//					int rowsToProcess = 5;
-//					int startRow = lastProcessedRow + 1;
-//					int endRow = Math.min(startRow + rowsToProcess - 1, totalRows);
-//					int processedCount = 0;
-//
-//					for (int i = startRow; i <= endRow; i++) {
-//						ResponseExcel2 response = new ResponseExcel2();
-//						XSSFRow row = sheet.getRow(i);
-//
-//						if (row == null)
-//							continue;
-//
-//						boolean isEmptyRow = true;
-//						List<String> errorFields = new ArrayList<>();
-//						PersonalDetails entity = new PersonalDetails();
-//
-//						for (int j = row.getFirstCellNum(); j < row.getLastCellNum(); j++) {
-//							XSSFCell cell = row.getCell(j);
-//							if (cell != null && cell.getCellType() != CellType.BLANK
-//									&& (cell.getCellType() != CellType.STRING
-//											|| !cell.getStringCellValue().trim().isEmpty())) {
-//								isEmptyRow = false;
-//								break;
-//							}
-//						}
-//
-//						if (isEmptyRow)
-//							continue;
-//
-//						recordCount.put("totalExcelCount", recordCount.get("totalExcelCount") + 1);
-//
-//						String title = getCellString(row.getCell(0));
-//						if (title != null && !title.trim().isEmpty()) {
-//							entity.setTitle(title);
-//						}
-//
-//						String fullName = getCellString(row.getCell(1));
-//						if (fullName == null || fullName.trim().isEmpty() || !fullName.matches("[a-zA-Z\\s]+")) {
-//							errorFields.add("fullName");
-//						} else {
-//							entity.setFullName(fullName);
-//						}
-//
-//						String dob = getCellString(row.getCell(2));
-//						if (dob == null || dob.trim().isEmpty()) {
-//							errorFields.add("dateOfBirth");
-//						} else {
-//							entity.setDateOfBirth(dob);
-//						}
-//
-//						String pan = getCellString(row.getCell(3)).toUpperCase().trim();
-//						if (!pan.matches("^[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}$")) {
-//							errorFields.add("panNumber");
-//						} else {
-//							entity.setPanNumber(pan);
-//						}
-//
-//						String genderString = getCellString(row.getCell(4)).toUpperCase();
-//						Gender gender = null;
-//						for (Gender g : Gender.values()) {
-//							if (g.name().equalsIgnoreCase(genderString)) {
-//								gender = g;
-//								break;
-//							}
-//						}
-//						if (gender == null) {
-//							errorFields.add("gender");
-//						} else {
-//							entity.setGender(gender);
-//							entity.setGenderId(getGenderId(gender));
-//						}
-//
-//						String maritalStatusStr = getCellString(row.getCell(5)).toUpperCase();
-//						MaritalStatus maritalStatus = null;
-//						for (MaritalStatus m : MaritalStatus.values()) {
-//							if (m.name().equalsIgnoreCase(maritalStatusStr)) {
-//								maritalStatus = m;
-//								break;
-//							}
-//						}
-//						if (maritalStatus != null) {
-//							entity.setMaritalStatus(maritalStatus);
-//						}
-//
-//						String nationalityStr = getCellString(row.getCell(6)).toUpperCase();
-//						Nationality nationality = null;
-//						for (Nationality n : Nationality.values()) {
-//							if (n.name().equalsIgnoreCase(nationalityStr)) {
-//								nationality = n;
-//								break;
-//							}
-//						}
-//						if (nationality != null) {
-//							entity.setNationality(nationality);
-//						}
-//
-//						String occupationStr = getCellString(row.getCell(7)).toUpperCase();
-//						Occupation occupation = null;
-//						for (Occupation o : Occupation.values()) {
-//							if (o.name().equalsIgnoreCase(occupationStr)) {
-//								occupation = o;
-//								break;
-//							}
-//						}
-//						if (occupation != null) {
-//							entity.setOccupation(occupation);
-//						}
-//
-//						String email = getCellString(row.getCell(8));
-//						if (email == null || !email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
-//							errorFields.add("email");
-//						} else {
-//							entity.setEmailId(email);
-//						}
-//
-//						String mobileNumber = getCellString(row.getCell(9));
-//						if (mobileNumber == null || !mobileNumber.matches("^[6-9]\\d{9}$")) {
-//							errorFields.add("mobileNumber");
-//						} else {
-//							entity.setMobileNo(mobileNumber);
-//						}
-//
-//						String alternateMobile = getCellString(row.getCell(10));
-//						if (alternateMobile != null && !alternateMobile.trim().isEmpty()
-//								&& alternateMobile.matches("^[6-9]\\d{9}$")) {
-//							entity.setAlternateMobileNo(alternateMobile);
-//						}
-//
-//						String address = getCellString(row.getCell(11));
-//						if (address == null || address.trim().isEmpty()) {
-//							errorFields.add("address");
-//						}
-//						entity.setAddress(address);
-//
-//						String pincode = getCellString(row.getCell(12));
-//						if (pincode == null || !pincode.matches("^\\d{6}$")) {
-//							errorFields.add("pincode");
-//						}
-//						entity.setPincode(pincode);
-//
-//						String city = getCellString(row.getCell(13));
-//						if (city == null || city.trim().isEmpty()) {
-//							errorFields.add("city");
-//						} else {
-//							entity.setCity(city);
-//						}
-//
-//						String state = getCellString(row.getCell(14));
-//						if (state == null || state.trim().isEmpty()) {
-//							errorFields.add("state");
-//						} else {
-//							entity.setState(state);
-//						}
-//
-//						entity.setStatus('Y');
-//
-//						if (!errorFields.isEmpty()) {
-//							response.setErrorField(String.join(", ", errorFields));
-//							response.setError("Invalid Mandatory fields");
-//							response.setStatus(false);
-//							response.setUpdateMessage("Failure!!");
-//							responseExcel2Repository.save(response);
-//							recordCount.put("errorExcelCount", recordCount.get("errorExcelCount") + 1);
-//							continue;
-//						}
-//
-//						PersonalDetails saved = personalDetailsRepository.save(entity);
-//						savedExcelList.add(saved);
-//
-//						processedCount++;
-//						queue.setRowRead(i);
-//						queue.setLastProcessedRow(i);
-//						
-//						
-//					}
-//				
-////					queue.setRowRead(endRow);
-//					// After processing rows
-//					
-//					queueTableRepository.save(queue);
-//
-//					
-//
-//					System.out.println("Batch Processing Summary:");
-//					System.out.println("Total Records Processed: " + recordCount.get("totalExcelCount"));
-//					System.out.println("Error Records: " + recordCount.get("errorExcelCount"));
-//					System.out.println("Saved Records: " + savedExcelList.size());
-//
-//				} catch (Exception e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}
-//	}
 
 }
