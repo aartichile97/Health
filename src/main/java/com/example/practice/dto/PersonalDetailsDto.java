@@ -1,6 +1,5 @@
 package com.example.practice.dto;
 
-import java.time.LocalDate;
 
 public class PersonalDetailsDto {
 
