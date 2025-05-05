@@ -57,7 +57,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@GetMapping("listing")
+	@GetMapping("list")
 	public ResponseHandler getAllPersonalDetails() {
 //		ResponseHandler response = new ResponseHandler();
 		try {
@@ -101,7 +101,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@DeleteMapping("delete_by_id/{personalId}")
+	@DeleteMapping("delete/{personalId}")
 	public ResponseHandler deletePersonalDetails(@PathVariable Integer personalId) {
 //		ResponseHandler response = new ResponseHandler();
 		try {
@@ -122,7 +122,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@PutMapping("update_by_id/{personalId}")
+	@PutMapping("update/{personalId}")
 	public ResponseHandler updatePersonalDetails(@PathVariable Integer personalId,
 			@RequestBody PersonalDetailsDto personalDetailsDto) {
 //		ResponseHandler response = new ResponseHandler();
@@ -142,7 +142,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@PostMapping("get_all")
+	@PostMapping("listing")
 	public ResponseHandler getPersonalDetails(@RequestBody ProposerListing proposerListing) {
 //		ResponseHandler response = new ResponseHandler();
 		try {
@@ -177,7 +177,7 @@ public class PersonalDetailsController {
 //		}
 //		return response;
 //	}
-	@GetMapping("/export_personal_details")
+	@GetMapping("/excel_export")
 	public void exportPersonalDetailsToExcel() {
 		try {
 			// Manually invoke the scheduled task method
@@ -187,7 +187,7 @@ public class PersonalDetailsController {
 		}
 	}
 
-	@GetMapping("export_sample_personal_details")
+	@GetMapping("excel_sample_export")
 	public ResponseHandler exportSamplePersonalDetailsToExcel() {
 //		ResponseHandler response = new ResponseHandler();
 		try {
@@ -204,7 +204,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@PostMapping(value = "import_personal_details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "excel_import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseHandler importPersonalDetails(@RequestParam("file") MultipartFile file) {
 
 		ResponseHandler response = new ResponseHandler();
@@ -261,7 +261,7 @@ public class PersonalDetailsController {
 	
 	
 	
-	@PostMapping(value = "import_schedule_personal_details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "excel_import_schedule", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseHandler importSchedulePersonalDetails(@RequestParam("file") MultipartFile file) {
 
 		ResponseHandler response = new ResponseHandler();
