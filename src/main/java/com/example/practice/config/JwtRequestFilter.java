@@ -10,69 +10,72 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
 @Component
 public class JwtRequestFilter extends OncePerRequestFilter {
 	@Autowired
-	 private  JwtUtil jwtUtil;
+	private JwtUtil jwtUtil;
 	@Autowired
-	 private  UserDetailsService userDetailsService;
+	private UserDetailsService userDetailsService;
 
-	    private static final List<String> EXCLUDE_URLS = List.of(
-	            "/swagger-ui/**", "/swagger-ui.html", 
-	            "/v3/api-docs/**", "/swagger-resources/**", 
-	            "/webjars/**", "/users/register", "/users/login"
-	    );
+	private static final List<String> EXCLUDE_URLS = List.of("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+			"/swagger-resources/**", "/webjars/**", "/users/register", "/users/login");
 
-	    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+	private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
+	private boolean isExcluded(String path) {
+		return EXCLUDE_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
+	}
 
-	    private boolean isExcluded(String path) {
-	        return EXCLUDE_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
-	    }
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+			throws ServletException, IOException {
 
-	    @Override
-	    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-	            throws ServletException, IOException {
+		String path = request.getServletPath();
 
-	        String path = request.getServletPath();
+		if (isExcluded(path)) {
+			chain.doFilter(request, response);
+			return;
+		}
 
-	        
-	        if (isExcluded(path)) {
-	            chain.doFilter(request, response);
-	            return;
-	        }
+		final String authorizationHeader = request.getHeader("Authorization");
 
-	        final String authorizationHeader = request.getHeader("Authorization");
+		String username = null;
+		String jwt = null;
+//	        System.err.println(authorizationHeader);
 
-	        String username = null;
-	        String jwt = null;
-	        System.err.println(authorizationHeader);
+		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+			jwt = authorizationHeader.substring(7);
 
-	        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-	            jwt = authorizationHeader.substring(7);
-	            username = jwtUtil.extractUsername(jwt);
-		        System.err.println(username);
+			try {
+				username = jwtUtil.extractUsername(jwt);
+			} catch (ExpiredJwtException e) {
+				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.getWriter().write("{\"error\":\"Token Expired\"}");
+				return;
+			} catch (Exception e) {
+				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.getWriter().write("{\"error\":\"Invalid token\"}");
+				return;
+			}
+		}
 
-	        }
+		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+//		        System.err.println(userDetails);
 
-	        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-	            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-		        System.err.println(userDetails);
+			if (jwtUtil.validateToken(jwt, username)) {
+				UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
+						null, userDetails.getAuthorities());
+				SecurityContextHolder.getContext().setAuthentication(authToken);
+			}
+		}
 
-	            if (jwtUtil.validateToken(jwt, username)) {
-	                UsernamePasswordAuthenticationToken authToken =
-	                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-	                SecurityContextHolder.getContext().setAuthentication(authToken);
-	            }
-	        }
-
-	        chain.doFilter(request, response);
-	    }
-
+		chain.doFilter(request, response);
+	}
 }

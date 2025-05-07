@@ -21,12 +21,18 @@ public class Users {
 
 	@Column(name = "password")
 	private String password;
+	
+	@Column(name = "email")
+	private String email;
 
-	public Users(Integer userId, String username, String password) {
+
+
+	public Users(Integer userId, String username, String password, String email) {
 		super();
 		this.userId = userId;
 		this.username = username;
 		this.password = password;
+		this.email = email;
 	}
 
 	public Users() {
@@ -58,4 +64,13 @@ public class Users {
 		this.password = password;
 	}
 
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	
 }
