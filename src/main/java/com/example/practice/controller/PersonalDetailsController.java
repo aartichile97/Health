@@ -18,11 +18,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.example.practice.config.JwtUtil;
 import com.example.practice.dto.PersonalDetailsDto;
 import com.example.practice.entity.PersonalDetails;
 import com.example.practice.listing.ProposerListing;
 import com.example.practice.response.ResponseHandler;
 import com.example.practice.service.PersonalDetailsService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/personal_details/")
@@ -30,6 +34,9 @@ public class PersonalDetailsController {
 
 	@Autowired
 	private PersonalDetailsService personalDetailsService;
+	
+	@Autowired
+	private JwtUtil jwtUtil;
 
 	ResponseHandler response = new ResponseHandler();
 
@@ -57,8 +64,41 @@ public class PersonalDetailsController {
 		return response;
 	}
 
+//	@GetMapping("list")
+//	public ResponseHandler getAllPersonalDetails() {
+////		ResponseHandler response = new ResponseHandler();
+//		try {
+//			List<PersonalDetails> details = personalDetailsService.getAllPersonalDetails();
+//
+//			response.setData(details);
+//			response.setMessage("Personal details retrieved successfully.");
+//			response.setStatus(true);
+//			response.setTotalRecords(personalDetailsService.totalRecords());
+//		} catch (IllegalArgumentException ex) {
+//			response.setData(new ArrayList<>());
+//			response.setMessage(ex.getMessage());
+//			response.setStatus(false);
+//		} catch (Exception ex) {
+//			response.setData(new ArrayList<>());
+//			response.setMessage(ex.getMessage());
+//			response.setStatus(false);
+//		}
+//		return response;
+//	}
+	
 	@GetMapping("list")
-	public ResponseHandler getAllPersonalDetails() {
+	public ResponseHandler getAllPersonalDetails(HttpServletRequest request) {
+		String header = request.getHeader("Authorization");
+		System.err.println("header >>>>>"+header);
+		String token = null;
+		if(header!=null && header.startsWith("Bearer ")) {
+			token = header.substring(7);
+		}
+		String username = jwtUtil.extractUsername(token);
+		Integer userId = jwtUtil.extractUserId(token);
+
+		System.err.println(username);
+		System.err.println(userId);
 //		ResponseHandler response = new ResponseHandler();
 		try {
 			List<PersonalDetails> details = personalDetailsService.getAllPersonalDetails();
@@ -79,7 +119,7 @@ public class PersonalDetailsController {
 		return response;
 	}
 
-	@GetMapping("get_by_id/{personalId}")
+	@GetMapping("list_by_id/{personalId}")
 	public ResponseHandler getPersonalDetailsById(@PathVariable Integer personalId) {
 //		ResponseHandler response = new ResponseHandler();
 		try {

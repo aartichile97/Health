@@ -36,21 +36,14 @@ public class UserService {
 		return "User registered successfully";
 	}
 
-//	public String loginUser(Users user) {
-//		Optional<Users> existingUser = userRepository.findByUsername(user.getUsername());
-//		if (existingUser.isPresent() && existingUser.get().getPassword().equals(user.getPassword())) {
-//			return jwtUtil.generateToken(user.getUsername());
-//		}
-//		return "Invalid username or password";
-//	}
-
 	public String loginUser(Users user) {
 		Optional<Users> existingUser = userRepository.findByUsername(user.getUsername());
 		if (existingUser.isPresent()) {
 			Users dbUser = existingUser.get();
 
 			if (passwordEncoder.matches(user.getPassword(), dbUser.getPassword())) {
-				return jwtUtil.generateToken(dbUser);
+				return jwtUtil.generateToken(dbUser.getUsername(), dbUser);
+
 			}
 		}
 		throw new IllegalArgumentException("Invalid username or password");

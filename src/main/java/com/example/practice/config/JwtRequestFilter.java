@@ -1,5 +1,6 @@
 package com.example.practice.config;
 
+import static org.mockito.ArgumentMatchers.nullable;
 import java.io.IOException;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,43 +24,58 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 	@Autowired
 	private UserDetailsService userDetailsService;
 
-	private static final List<String> EXCLUDE_URLS = List.of("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
-			"/swagger-resources/**", "/webjars/**", "/users/register", "/users/login");
-
-	private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
-	private boolean isExcluded(String path) {
-		return EXCLUDE_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
-	}
+//	private static final List<String> EXCLUDE_URLS = List.of("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+//			"/swagger-resources/**", "/webjars/**", "/users/register", "/users/login");
+//
+//	private final AntPathMatcher pathMatcher = new AntPathMatcher();
+//
+//	private boolean isExcluded(String path) {
+//		return EXCLUDE_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
+//	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
 
-		String path = request.getServletPath();
+//		String path = request.getServletPath();
 
-		if (isExcluded(path)) {
-			chain.doFilter(request, response);
-			return;
-		}
+//		if (isExcluded(path)) {
+//			chain.doFilter(request, response);
+//			return;
+//		}
 
 		final String authorizationHeader = request.getHeader("Authorization");
 
 		String username = null;
+		Integer userId = null;
+		String userEmail = null;
+		String userRole = null;
+
 		String jwt = null;
-//	        System.err.println(authorizationHeader);
+//	    System.err.println(authorizationHeader);
 
 		if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
 			jwt = authorizationHeader.substring(7);
 
 			try {
 				username = jwtUtil.extractUsername(jwt);
+				userId = jwtUtil.extractUserId(jwt);
+				userEmail = jwtUtil.extractEmail(jwt);
+				userRole = jwtUtil.extractRole(jwt);
+//				System.err.println("userId: "+userId);
+//				System.err.println("username: "+username);
+//				System.err.println("userEmail: "+userEmail);		
+//				System.err.println("userRole: "+userRole);				
+
+				
 			} catch (ExpiredJwtException e) {
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.setContentType("application/json");
 				response.getWriter().write("{\"error\":\"Token Expired\"}");
 				return;
 			} catch (Exception e) {
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.setContentType("application/json");
 				response.getWriter().write("{\"error\":\"Invalid token\"}");
 				return;
 			}
@@ -67,9 +83,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
 		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-//		        System.err.println(userDetails);
-
-			if (jwtUtil.validateToken(jwt, username)) {
+//		    System.err.println(userDetails);
+													
+			if (jwtUtil.validateToken(jwt, username, userId, userEmail, userRole)) {
 				UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
 						null, userDetails.getAuthorities());
 				SecurityContextHolder.getContext().setAuthentication(authToken);
